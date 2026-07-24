@@ -161,7 +161,7 @@ export default function Careers() {
 
           {/* CAREER PATHS */}
           {activeTab === 'paths' && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 24 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 24 }}>
               {careerPaths.map(p => (
                 <div key={p.title} style={{ ...cardStyle, cursor: 'pointer' }}
                   onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 12px 32px rgba(0,0,0,0.1)' }}
@@ -217,7 +217,7 @@ export default function Careers() {
                         <div style={{ height: '100%', width: `${skillGapResult.pct}%`, background: 'linear-gradient(90deg,#059669,#0284C7)', borderRadius: 5 }} />
                       </div>
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16, marginBottom: 20 }}>
                       <div style={{ background: '#F0FDF4', borderRadius: 12, padding: 16 }}>
                         <div style={{ fontSize: 13, fontWeight: 700, color: '#15803D', marginBottom: 10 }}>✅ Skills You Have</div>
                         {skillGapResult.matched.length ? skillGapResult.matched.map(s => <div key={s} style={{ fontSize: 13, color: '#166534', padding: '4px 0' }}>• {s}</div>) : <div style={{ fontSize: 13, color: '#16A34A' }}>None matched yet</div>}
@@ -235,7 +235,7 @@ export default function Careers() {
 
           {/* SALARY */}
           {activeTab === 'salary' && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 24 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 24 }}>
               {salaryData.map(s => (
                 <div key={s.role} style={cardStyle}
                   onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 12px 32px rgba(0,0,0,0.08)' }}
@@ -245,11 +245,11 @@ export default function Careers() {
                     <div style={{ fontSize: 32 }}>{s.icon}</div>
                     <div style={{ fontFamily: 'Sora,sans-serif', fontSize: 16, fontWeight: 800 }}>{s.role}</div>
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(80px, 1fr))', gap: 8 }}>
                     {[['Fresher', s.fresher, '#EFF6FF', '#2563EB'], ['Mid Level', s.mid, '#FDF4FF', '#7C3AED'], ['Senior', s.senior, '#F0FDF4', '#059669']].map(([level, salary, bg, color]) => (
-                      <div key={level} style={{ background: bg, borderRadius: 12, padding: '12px 10px', textAlign: 'center' }}>
-                        <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, marginBottom: 4 }}>{level}</div>
-                        <div style={{ fontFamily: 'Sora,sans-serif', fontSize: 13, fontWeight: 800, color }}>{salary}</div>
+                      <div key={level} style={{ background: bg, borderRadius: 12, padding: '12px 8px', textAlign: 'center' }}>
+                        <div style={{ fontSize: 10.5, color: 'var(--text-muted)', fontWeight: 600, marginBottom: 4 }}>{level}</div>
+                        <div style={{ fontFamily: 'Sora,sans-serif', fontSize: 12, fontWeight: 800, color }}>{salary}</div>
                       </div>
                     ))}
                   </div>
@@ -260,7 +260,7 @@ export default function Careers() {
 
           {/* TOP COMPANIES */}
           {activeTab === 'companies' && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 20 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 20 }}>
               {topCompanies.map(c => (
                 <div key={c.name} style={{ ...cardStyle, textAlign: 'center' }}
                   onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 12px 32px rgba(0,0,0,0.1)' }}

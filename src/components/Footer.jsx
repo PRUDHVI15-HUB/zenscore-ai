@@ -4,7 +4,7 @@ export default function Footer() {
   return (
     <footer style={{ background: '#0F172A', color: 'rgba(255,255,255,0.75)', padding: '80px 0 60px' }}>
       <div className="container">
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 60 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 32 }}>
           <div>
             <div style={{ fontFamily: 'Sora,sans-serif', fontSize: 20, fontWeight: 800, color: '#fff', marginBottom: 12 }}>
               ZenScore <span style={{ color: '#06B6D4' }}>AI</span>
@@ -49,7 +49,7 @@ export default function Footer() {
           </div>
         </div>
         <div style={{ height: 1, background: 'rgba(255,255,255,0.1)', margin: '40px 0 24px' }} />
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13, color: 'rgba(255,255,255,0.4)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, fontSize: 13, color: 'rgba(255,255,255,0.4)' }}>
           <span>© 2025 ZenScore AI. All rights reserved.</span>
           <span>Privacy Policy · Terms of Service</span>
         </div>

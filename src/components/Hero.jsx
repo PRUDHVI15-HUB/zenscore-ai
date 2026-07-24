@@ -4,6 +4,13 @@ import { useAuth } from '../context/AuthContext'
 export default function Hero() {
   const { loginWithGoogle, user } = useAuth()
   const ref = useRef()
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false)
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768)
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   useEffect(() => {
     const el = ref.current
@@ -12,14 +19,14 @@ export default function Hero() {
   }, [])
 
   return (
-    <section style={{
+    <section className="hero-section" style={{
       minHeight: 'calc(100vh - 72px)',
       background: 'linear-gradient(135deg, #F0F6FF 0%, #FAF5FF 50%, #F0FDFB 100%)',
-      display: 'flex', alignItems: 'center', padding: '80px 0'
+      display: 'flex', alignItems: 'center', padding: isMobile ? '40px 0' : '80px 0'
     }}>
-      <div ref={ref} className="fade-up" style={{
-        display: 'grid', gridTemplateColumns: '52% 48%', gap: 48, alignItems: 'center',
-        maxWidth: 1200, margin: '0 auto', padding: '0 24px', width: '100%'
+      <div ref={ref} className="fade-up container hero-grid" style={{
+        display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '52% 48%', gap: isMobile ? 32 : 48, alignItems: 'center',
+        width: '100%'
       }}>
         {/* LEFT */}
         <div>
@@ -27,23 +34,23 @@ export default function Hero() {
             display: 'inline-flex', alignItems: 'center', gap: 6,
             background: '#EFF6FF', color: 'var(--primary)',
             fontSize: 13, fontWeight: 600, padding: '6px 14px', borderRadius: 20,
-            marginBottom: 24, fontFamily: 'Sora, sans-serif'
+            marginBottom: 20, fontFamily: 'Sora, sans-serif'
           }}>
             <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--accent)' }} />
             AI-Powered Platform
           </div>
 
-          <h1 style={{
-            fontFamily: 'Sora, sans-serif', fontSize: 48, fontWeight: 800,
-            lineHeight: 1.1, color: 'var(--text-dark)', maxWidth: 540,
-            marginBottom: 24, letterSpacing: '-1.5px'
+          <h1 className="hero-title" style={{
+            fontFamily: 'Sora, sans-serif', fontSize: isMobile ? 32 : 48, fontWeight: 800,
+            lineHeight: 1.15, color: 'var(--text-dark)', maxWidth: 540,
+            marginBottom: 20, letterSpacing: '-1px'
           }}>
             Your Complete{' '}
             <span style={{ color: 'var(--primary)' }}>AI-Powered</span>{' '}
             Student Ecosystem
           </h1>
 
-          <p style={{ fontSize: 18, color: 'var(--text-mid)', maxWidth: 500, lineHeight: 1.65, marginBottom: 32 }}>
+          <p className="hero-subtitle" style={{ fontSize: 18, color: 'var(--text-mid)', maxWidth: 500, lineHeight: 1.65, marginBottom: 32 }}>
             Predict performance. Prepare smarter. Get placed faster.
           </p>
 
@@ -81,13 +88,13 @@ export default function Hero() {
 
         {/* RIGHT — Dashboard Mockup */}
         <div style={{ position: 'relative' }}>
-          <div style={{
+          <div className="hero-mockup-wrapper" style={{
             width: '100%', minHeight: 420, borderRadius: 24,
             background: 'linear-gradient(145deg, #1E40AF 0%, #2563EB 40%, #7C3AED 100%)',
             padding: 24, position: 'relative', overflow: 'visible',
             boxShadow: '0 24px 64px rgba(37,99,235,0.22)'
           }}>
-            <div style={{
+            <div className="hero-mockup-card" style={{
               background: 'rgba(255,255,255,0.1)', borderRadius: 16,
               padding: 20, height: 360,
               display: 'flex', flexDirection: 'column', gap: 14,

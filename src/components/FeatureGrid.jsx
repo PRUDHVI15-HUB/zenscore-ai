@@ -43,7 +43,7 @@ export default function FeatureGrid() {
             From academics to placement — ZenScore AI maps your entire student journey intelligently.
           </p>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 32 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 24 }}>
           {features.map(f => (
             <div key={f.title}
               onClick={() => handleClick(f.path)}

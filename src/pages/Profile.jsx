@@ -42,16 +42,16 @@ export default function Profile() {
         <div className="container" style={{ maxWidth: 800 }}>
 
           {/* Header banner */}
-          <div style={{ background: 'linear-gradient(135deg,#1E40AF,#2563EB,#7C3AED)', borderRadius: 24, padding: '32px 36px', marginBottom: 28, display: 'flex', alignItems: 'center', gap: 24 }}>
-            <div style={{ width: 80, height: 80, borderRadius: '50%', border: '3px solid rgba(255,255,255,0.3)', overflow: 'hidden', flexShrink: 0, background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: 'linear-gradient(135deg,#1E40AF,#2563EB,#7C3AED)', borderRadius: 24, padding: '24px 20px', marginBottom: 28, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 20 }}>
+            <div style={{ width: 72, height: 72, borderRadius: '50%', border: '3px solid rgba(255,255,255,0.3)', overflow: 'hidden', flexShrink: 0, background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               {user?.photoURL
                 ? <img src={user.photoURL} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                : <span style={{ fontFamily: 'Sora,sans-serif', fontWeight: 800, fontSize: 32, color: '#fff' }}>{user?.displayName?.[0]}</span>}
+                : <span style={{ fontFamily: 'Sora,sans-serif', fontWeight: 800, fontSize: 28, color: '#fff' }}>{user?.displayName?.[0]}</span>}
             </div>
-            <div>
-              <h1 style={{ fontFamily: 'Sora,sans-serif', fontSize: 24, fontWeight: 800, color: '#fff' }}>{user?.displayName}</h1>
-              <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.7)', marginTop: 4 }}>{user?.email}</div>
-              <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', marginTop: 4 }}>
+            <div style={{ flex: 1, minWidth: 180 }}>
+              <h1 style={{ fontFamily: 'Sora,sans-serif', fontSize: 22, fontWeight: 800, color: '#fff' }}>{user?.displayName}</h1>
+              <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', marginTop: 4 }}>{user?.email}</div>
+              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginTop: 4 }}>
                 {profile.branch} • {profile.university} • Sem {profile.semester}
               </div>
             </div>
@@ -66,14 +66,14 @@ export default function Profile() {
             ))}
           </div>
 
-          <div style={{ background: '#fff', borderRadius: 20, padding: 32, border: '1px solid #E8ECF4' }}>
+          <div style={{ background: '#fff', borderRadius: 20, padding: '24px 20px', border: '1px solid #E8ECF4' }}>
 
             {/* Profile Tab */}
             {activeTab === 'profile' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                 <div style={{ fontFamily: 'Sora,sans-serif', fontSize: 16, fontWeight: 800, color: '#0F172A', marginBottom: 4 }}>Personal Information</div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
                   {[['Full Name', 'name', false], ['Email', 'email', true]].map(([label, key, disabled]) => (
                     <div key={key}>
                       <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#94A3B8', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.8 }}>{label}</label>
@@ -82,7 +82,7 @@ export default function Profile() {
                   ))}
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 16 }}>
                   {[['Branch', 'branch', branches], ['University', 'university', universities], ['Semester', 'semester', semesters]].map(([label, key, opts]) => (
                     <div key={key}>
                       <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#94A3B8', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.8 }}>{label}</label>

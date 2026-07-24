@@ -14,7 +14,7 @@ export default function WhyUs() {
           <h2 style={{ fontFamily: 'Sora,sans-serif', fontSize: 34, fontWeight: 800, color: 'var(--text-dark)', marginBottom: 12, letterSpacing: '-0.8px' }}>Built for the Modern Student</h2>
           <p style={{ fontSize: 17, color: 'var(--text-muted)', maxWidth: 560, lineHeight: 1.65, marginBottom: 48, margin: '0 auto 48px' }}>Four pillars that set ZenScore AI apart from every other student platform.</p>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 40 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 24 }}>
           {blocks.map(b => (
             <div key={b.title} style={{ textAlign: 'center', padding: 8 }}>
               <div style={{ width: 64, height: 64, borderRadius: 18, background: b.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, margin: '0 auto 16px' }}>{b.icon}</div>

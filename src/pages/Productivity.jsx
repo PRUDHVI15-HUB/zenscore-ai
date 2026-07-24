@@ -302,9 +302,9 @@ export default function Productivity() {
                 <input placeholder="Add task (e.g. DSA - 2hrs)" value={weeklyInput.task} onChange={e => setWeeklyInput(p => ({ ...p, task: e.target.value }))} onKeyDown={e => e.key === 'Enter' && addWeeklyTask()} style={{ ...inp, flex: 1 }} />
                 <button onClick={addWeeklyTask} style={{ ...btn, height: 40, padding: '0 16px' }}>+ Add</button>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 12 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 12 }}>
                 {days.map(day => (
-                  <div key={day} style={{ background: '#fff', borderRadius: 16, padding: 16, border: '1px solid var(--border)', minHeight: 200 }}>
+                  <div key={day} style={{ background: '#fff', borderRadius: 16, padding: 16, border: '1px solid var(--border)', minHeight: 180 }}>
                     <div style={{ fontFamily: 'Sora,sans-serif', fontWeight: 800, fontSize: 14, marginBottom: 12, color: 'var(--primary)', textAlign: 'center' }}>{day}</div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                       {(weeklyPlan[day] || []).map((task, i) => (
@@ -325,7 +325,7 @@ export default function Productivity() {
             <div style={{ maxWidth: 680 }}>
               <SectionHeader icon="📝" title="Study Session Logger" desc="Log your study sessions to track your progress" />
               <div style={{ ...card, marginBottom: 24 }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 2fr', gap: 12, marginBottom: 12 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 12, marginBottom: 12 }}>
                   <input placeholder="Subject (e.g. DSA)" value={newSession.subject} onChange={e => setNewSession(p => ({ ...p, subject: e.target.value }))} style={inp} />
                   <input type="number" placeholder="Hours" value={newSession.hours} onChange={e => setNewSession(p => ({ ...p, hours: e.target.value }))} style={inp} />
                   <input placeholder="Notes (optional)" value={newSession.notes} onChange={e => setNewSession(p => ({ ...p, notes: e.target.value }))} style={inp} />
@@ -333,7 +333,7 @@ export default function Productivity() {
                 <button onClick={addSession} style={{ ...btn, height: 40 }}>Log Session</button>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16, marginBottom: 24 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 16, marginBottom: 24 }}>
                 {[['⏱️', 'Total Hours', `${totalHours.toFixed(1)}h`], ['📚', 'Sessions', sessions.length], ['📅', 'Days Active', new Set(sessions.map(s => s.date)).size]].map(([icon, label, val]) => (
                   <div key={label} style={{ ...card, textAlign: 'center', padding: 16 }}>
                     <div style={{ fontSize: 24, marginBottom: 6 }}>{icon}</div>

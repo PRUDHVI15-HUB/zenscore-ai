@@ -16,6 +16,8 @@ export default function Navbar() {
   const { user, logout } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
+
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
@@ -24,6 +26,16 @@ export default function Navbar() {
   const searchRef = useRef(null)
 
   useEffect(() => { window.scrollTo({ top: 0, behavior: 'instant' }) }, [location.pathname])
+
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth < 768
+      setIsMobile(mobile)
+      if (!mobile) setSidebarOpen(false)
+    }
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   useEffect(() => {
     const handler = (e) => {
@@ -50,11 +62,11 @@ export default function Navbar() {
   return (
     <>
       {/* Top Navbar */}
-      <nav style={{ height: 64, background: '#fff', borderBottom: '1px solid #E8ECF4', display: 'flex', alignItems: 'center', padding: '0 20px', gap: 16, position: 'sticky', top: 0, zIndex: 100, boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+      <nav style={{ height: 64, background: '#fff', borderBottom: '1px solid #E8ECF4', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: isMobile ? '0 14px' : '0 20px', gap: 12, position: 'sticky', top: 0, zIndex: 100, boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
 
         {/* Hamburger + Logo */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <button onClick={() => setSidebarOpen(p => !p)} style={{ width: 36, height: 36, borderRadius: 10, border: '1px solid #E8ECF4', background: 'transparent', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+          <button onClick={() => setSidebarOpen(p => !p)} aria-label="Toggle navigation menu" style={{ width: 36, height: 36, borderRadius: 10, border: '1px solid #E8ECF4', background: 'transparent', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
             {[0,1,2].map(i => (
               <div key={i} style={{ width: 18, height: 2, background: '#334155', borderRadius: 2, transition: 'all 0.3s',
                 transform: sidebarOpen ? (i === 0 ? 'rotate(45deg) translate(5px,5px)' : i === 2 ? 'rotate(-45deg) translate(5px,-5px)' : 'scaleX(0)') : 'none' }} />
@@ -66,8 +78,8 @@ export default function Navbar() {
           </Link>
         </div>
 
-        {/* Center nav links */}
-        <div style={{ display: 'flex', gap: 2, flex: 1, justifyContent: 'center' }}>
+        {/* Center nav links (Hidden on mobile via CSS class) */}
+        <div className="desktop-nav-links" style={{ display: 'flex', gap: 2, flex: 1, justifyContent: 'center' }}>
           {navLinks.slice(0, 6).map(link => {
             const active = location.pathname === link.path
             return (
@@ -87,11 +99,11 @@ export default function Navbar() {
 
           {/* Search */}
           <div ref={searchRef} style={{ position: 'relative' }}>
-            <button onClick={() => setSearchOpen(p => !p)} style={{ height: 36, padding: '0 14px', borderRadius: 10, border: '1px solid #E8ECF4', background: '#F8FAFF', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, color: '#94A3B8', fontSize: 13, fontFamily: 'DM Sans,sans-serif' }}>
-              🔍 <span>Search</span> <span style={{ fontSize: 11, background: '#E8ECF4', padding: '1px 6px', borderRadius: 5 }}>/</span>
+            <button onClick={() => setSearchOpen(p => !p)} style={{ height: 36, padding: '0 12px', borderRadius: 10, border: '1px solid #E8ECF4', background: '#F8FAFF', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, color: '#94A3B8', fontSize: 13, fontFamily: 'DM Sans,sans-serif' }}>
+              🔍 <span className="desktop-search-text">Search</span> <span style={{ fontSize: 11, background: '#E8ECF4', padding: '1px 6px', borderRadius: 5 }}>/</span>
             </button>
             {searchOpen && (
-              <div style={{ position: 'absolute', top: 44, right: 0, width: 280, background: '#fff', border: '1px solid #E8ECF4', borderRadius: 16, boxShadow: '0 8px 32px rgba(0,0,0,0.12)', overflow: 'hidden', zIndex: 200 }}>
+              <div style={{ position: 'absolute', top: 44, right: 0, width: isMobile ? 260 : 280, background: '#fff', border: '1px solid #E8ECF4', borderRadius: 16, boxShadow: '0 8px 32px rgba(0,0,0,0.12)', overflow: 'hidden', zIndex: 200 }}>
                 <input autoFocus value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search pages..." style={{ width: '100%', padding: '12px 16px', border: 'none', outline: 'none', background: 'transparent', fontSize: 14, color: '#0F172A', fontFamily: 'DM Sans,sans-serif', borderBottom: '1px solid #E8ECF4', boxSizing: 'border-box' }} />
                 {filtered.map(l => (
                   <div key={l.path} onClick={() => { navigate(l.path); setSearchOpen(false); setSearchQuery('') }} style={{ padding: '10px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, color: '#334155', fontSize: 14, fontFamily: 'DM Sans,sans-serif' }}
@@ -105,18 +117,18 @@ export default function Navbar() {
             )}
           </div>
 
-          {/* Profile dropdown */}
+          {/* Profile / Auth buttons */}
           {!user ? (
-  <div style={{ display: 'flex', gap: 8 }}>
-    <button onClick={() => navigate('/login')} style={{ height: 36, padding: '0 18px', borderRadius: 10, border: '1.5px solid #E8ECF4', background: 'transparent', color: '#334155', cursor: 'pointer', fontFamily: 'Sora,sans-serif', fontWeight: 600, fontSize: 13 }}>
-      Login
-    </button>
-    <button onClick={() => navigate('/register')} style={{ height: 36, padding: '0 18px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#2563EB,#7C3AED)', color: '#fff', cursor: 'pointer', fontFamily: 'Sora,sans-serif', fontWeight: 600, fontSize: 13 }}>
-      Sign Up
-    </button>
-  </div>
-) : (
-  <div ref={profileRef} style={{ position: 'relative' }}>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button onClick={() => navigate('/login')} style={{ height: 36, padding: isMobile ? '0 12px' : '0 18px', borderRadius: 10, border: '1.5px solid #E8ECF4', background: 'transparent', color: '#334155', cursor: 'pointer', fontFamily: 'Sora,sans-serif', fontWeight: 600, fontSize: 12.5 }}>
+                Login
+              </button>
+              <button onClick={() => navigate('/register')} style={{ height: 36, padding: isMobile ? '0 12px' : '0 18px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#2563EB,#7C3AED)', color: '#fff', cursor: 'pointer', fontFamily: 'Sora,sans-serif', fontWeight: 600, fontSize: 12.5 }}>
+                Sign Up
+              </button>
+            </div>
+          ) : (
+            <div ref={profileRef} style={{ position: 'relative' }}>
               <button onClick={() => setProfileOpen(p => !p)} style={{ width: 36, height: 36, borderRadius: '50%', border: '2px solid #E8ECF4', cursor: 'pointer', overflow: 'hidden', background: '#7C3AED', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 {user.photoURL
                   ? <img src={user.photoURL} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -152,7 +164,7 @@ export default function Navbar() {
       {/* Sidebar backdrop */}
       {sidebarOpen && <div onClick={() => setSidebarOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.3)', zIndex: 98, backdropFilter: 'blur(2px)' }} />}
 
-      {/* Sidebar */}
+      {/* Sidebar Drawer */}
       <div style={{ position: 'fixed', top: 64, left: 0, height: 'calc(100vh - 64px)', width: 260, background: '#fff', borderRight: '1px solid #E8ECF4', zIndex: 99, transform: sidebarOpen ? 'translateX(0)' : 'translateX(-100%)', transition: 'transform 0.3s cubic-bezier(0.4,0,0.2,1)', display: 'flex', flexDirection: 'column', padding: '16px 12px', boxShadow: '4px 0 24px rgba(0,0,0,0.08)' }}>
         <div style={{ fontSize: 11, fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: 1.2, padding: '4px 8px', marginBottom: 8 }}>Navigation</div>
         {navLinks.map(link => {

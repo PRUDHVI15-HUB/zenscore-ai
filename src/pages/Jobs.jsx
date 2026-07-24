@@ -183,7 +183,7 @@ export default function Jobs() {
                   {['All', 'Junior', 'Mid', 'Senior'].map(l => <option key={l}>{l}</option>)}
                 </select>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 20 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 20 }}>
                 {filteredJobs.map(job => (
                   <div key={job.id} style={card}
                     onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = 'var(--shadow-lg)' }}
@@ -219,7 +219,7 @@ export default function Jobs() {
           {activeTab === 'internships' && (
             <div>
               <SectionHeader icon="🎯" title="Internship Listings" desc="Latest internship opportunities from top companies" />
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 20 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 20 }}>
                 {internships.map(i => (
                   <div key={i.id} style={card}
                     onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = 'var(--shadow-lg)' }}

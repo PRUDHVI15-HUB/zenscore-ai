@@ -40,7 +40,10 @@ export default function AppLayout({ children, title, searchVal, onSearchChange }
   const navigate = useNavigate()
   const location = useLocation()
 
-  const [sidebarOpen,      setSidebarOpen]      = useState(true)
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false)
+  const [isTablet, setIsTablet] = useState(typeof window !== 'undefined' ? window.innerWidth >= 768 && window.innerWidth < 1024 : false)
+  const [sidebarOpen, setSidebarOpen] = useState(typeof window !== 'undefined' ? window.innerWidth >= 1024 : true)
+
   const [showDropdown,     setShowDropdown]     = useState(false)
   const [showNotifications,setShowNotifications]= useState(false)
   const [showProfileMenu,  setShowProfileMenu]  = useState(false)
@@ -54,6 +57,54 @@ export default function AppLayout({ children, title, searchVal, onSearchChange }
     { label: 'Practice Data Structures (Daily Challenge)', path: '/courses' },
     { label: 'Track productivity & streak goals', path: '/productivity' }
   ]
+
+  // Monitor window resize
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth < 768
+      const tablet = window.innerWidth >= 768 && window.innerWidth < 1024
+      setIsMobile(mobile)
+      setIsTablet(tablet)
+      if (mobile || tablet) {
+        setSidebarOpen(false)
+      } else {
+        setSidebarOpen(true)
+      }
+    }
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
+  // Auto-close sidebar on mobile/tablet route change
+  useEffect(() => {
+    if (isMobile || isTablet) {
+      setSidebarOpen(false)
+    }
+  }, [location.pathname, isMobile, isTablet])
+
+  // ESC key handler to close sidebar/modals
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        if (isMobile || isTablet) setSidebarOpen(false)
+        setShowNotifications(false)
+        setShowProfileMenu(false)
+        setShowSearch(false)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isMobile, isTablet])
+
+  // Lock body scroll when mobile sidebar is open
+  useEffect(() => {
+    if (isMobile && sidebarOpen) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => { document.body.style.overflow = '' }
+  }, [isMobile, sidebarOpen])
 
   // Redirect if not logged in
   useEffect(() => { if (!user) navigate('/') }, [user])
@@ -79,11 +130,29 @@ export default function AppLayout({ children, title, searchVal, onSearchChange }
     ? allPages.filter(p => p.label.toLowerCase().includes(searchQuery.toLowerCase()))
     : allPages
 
+  const isMobileOrTablet = isMobile || isTablet
+
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: '#F8FAFC' }}>
+    <div style={{ display: 'flex', minHeight: '100vh', background: '#F8FAFC', position: 'relative', width: '100%', overflowX: 'hidden' }}>
+
+      {/* ── BACKDROP OVERLAY FOR MOBILE/TABLET SIDEBAR ── */}
+      {isMobileOrTablet && sidebarOpen && (
+        <div
+          onClick={() => setSidebarOpen(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.45)',
+            backdropFilter: 'blur(4px)',
+            WebkitBackdropFilter: 'blur(4px)',
+            zIndex: 45,
+            transition: 'opacity 0.25s ease'
+          }}
+        />
+      )}
 
       {/* ── LEFT SIDEBAR ── */}
-      <aside style={{
+      <aside className="app-layout-sidebar" style={{
         width: 260,
         background: '#fff',
         borderRight: '1px solid #E2E8F0',
@@ -96,7 +165,8 @@ export default function AppLayout({ children, title, searchVal, onSearchChange }
         padding: '20px 14px',
         transition: 'all 0.25s ease-in-out',
         overflowY: 'auto',
-        overflowX: 'hidden'
+        overflowX: 'hidden',
+        boxShadow: isMobileOrTablet ? '8px 0 32px rgba(15,23,42,0.15)' : 'none'
       }}>
 
         {/* TOP: Logo + Nav */}
@@ -237,32 +307,35 @@ export default function AppLayout({ children, title, searchVal, onSearchChange }
       </aside>
 
       {/* ── MAIN AREA ── */}
-      <main style={{
+      <main className="app-layout-main" style={{
         flex: 1,
-        paddingLeft: sidebarOpen ? 260 : 0,
+        paddingLeft: (!isMobileOrTablet && sidebarOpen) ? 260 : 0,
         minHeight: '100vh',
         display: 'flex',
         flexDirection: 'column',
-        transition: 'padding-left 0.25s ease-in-out'
+        transition: 'padding-left 0.25s ease-in-out',
+        width: '100%',
+        minWidth: 0
       }}>
 
         {/* ── TOP HEADER ── */}
-        <header style={{
-          height: 72, background: '#fff', borderBottom: '1px solid #E2E8F0',
-          padding: '0 32px', display: 'flex', alignItems: 'center',
+        <header className="app-layout-header" style={{
+          height: isMobile ? 64 : 72, background: '#fff', borderBottom: '1px solid #E2E8F0',
+          padding: isMobile ? '0 14px' : '0 32px', display: 'flex', alignItems: 'center',
           justifyContent: 'space-between',
-          position: 'sticky', top: 0, zIndex: 40
+          position: 'sticky', top: 0, zIndex: 40,
+          gap: 12
         }}>
           {/* Left: Hamburger + Title */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 10 : 16 }}>
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748B', display: 'flex', alignItems: 'center', padding: 0 }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748B', display: 'flex', alignItems: 'center', padding: 4 }}
             >
               <Menu size={20} strokeWidth={2.5} />
             </button>
             {headerTitle && (
-              <h1 style={{ fontFamily: 'Sora, sans-serif', fontSize: 24, fontWeight: 800, color: '#1E293B', margin: 0, letterSpacing: '-0.5px' }}>
+              <h1 className="app-layout-header-title" style={{ fontFamily: 'Sora, sans-serif', fontSize: isMobile ? 17 : 24, fontWeight: 800, color: '#1E293B', margin: 0, letterSpacing: '-0.5px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {headerTitle}
               </h1>
             )}

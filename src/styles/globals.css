@@ -21,13 +21,32 @@
   --radius-card: 20px;
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
-html { scroll-behavior: smooth; }
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+html, body {
+  width: 100%;
+  overflow-x: hidden;
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
 body {
   font-family: 'DM Sans', sans-serif;
   color: var(--text-dark);
   background: var(--bg);
-  overflow-x: hidden;
+}
+
+img, video, canvas, svg {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+button, input, textarea, select {
+  max-width: 100%;
 }
 
 .fade-up {
@@ -41,12 +60,115 @@ body {
 }
 
 .container {
+  width: 100%;
   max-width: 1200px;
   margin: 0 auto;
-  padding: 0 24px;
+  padding-inline: 24px;
 }
 
-section { padding: 96px 0; }
+@media (max-width: 768px) {
+  .container {
+    padding-inline: 16px !important;
+  }
+  section {
+    padding: 40px 0 !important;
+  }
+}
+
+.responsive-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-bottom: 1rem;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   BULLETPROOF MOBILE RESPONSIVE MEDIA QUERIES (PURE CSS)
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Navigation Hiding on Mobile */
+@media (max-width: 768px) {
+  .desktop-nav-links {
+    display: none !important;
+  }
+  .desktop-search-text {
+    display: none !important;
+  }
+}
+
+/* Hero Section Responsiveness */
+@media (max-width: 768px) {
+  .hero-section {
+    padding: 32px 0 !important;
+    min-height: auto !important;
+  }
+  .hero-grid {
+    grid-template-columns: 1fr !important;
+    gap: 28px !important;
+  }
+  .hero-title {
+    font-size: 28px !important;
+    line-height: 1.2 !important;
+    max-width: 100% !important;
+    letter-spacing: -0.5px !important;
+    word-break: break-word !important;
+  }
+  .hero-subtitle {
+    font-size: 15px !important;
+    max-width: 100% !important;
+    margin-bottom: 24px !important;
+  }
+  .hero-mockup-wrapper {
+    min-height: auto !important;
+    padding: 16px !important;
+  }
+  .hero-mockup-card {
+    height: auto !important;
+    padding: 14px !important;
+  }
+}
+
+/* AppLayout Sidebar & Main area responsiveness */
+@media (max-width: 1023px) {
+  .app-layout-main {
+    padding-left: 0 !important;
+  }
+  .app-layout-sidebar {
+    position: fixed !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    z-index: 50 !important;
+    box-shadow: 8px 0 32px rgba(15, 23, 42, 0.2) !important;
+  }
+  .app-layout-header {
+    height: 60px !important;
+    padding: 0 14px !important;
+  }
+  .app-layout-header-title {
+    font-size: 17px !important;
+  }
+}
+
+/* General Grid auto-wrapping */
+@media (max-width: 768px) {
+  .responsive-grid {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+  .responsive-grid-2 {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+  .responsive-grid-3 {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+  .responsive-grid-4 {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+}
 
 /* ═══════════════════════════════════════════════════════════════
    AI ACADEMIC COPILOT — Chat Panel Premium Styles

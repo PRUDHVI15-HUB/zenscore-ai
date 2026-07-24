@@ -30,7 +30,7 @@ export default function CoursesGrid() {
         <p style={{ fontSize: 17, color: 'var(--text-muted)', maxWidth: 560, lineHeight: 1.65, marginBottom: 48 }}>
           Curated programs aligned to top company hiring patterns and skill requirements.
         </p>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 32 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 24 }}>
           {courses.map(c => (
             <div key={c.title}
               onClick={handleClick}

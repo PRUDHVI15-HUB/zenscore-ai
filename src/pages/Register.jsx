@@ -112,12 +112,12 @@ export default function Register() {
         minHeight: 'calc(100vh - 72px)',
         background: 'linear-gradient(135deg, #F0F6FF 0%, #FAF5FF 50%, #F0FDFB 100%)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: '48px 24px'
+        padding: '32px 16px'
       }}>
         <div style={{
           width: '100%', maxWidth: 480,
           background: '#fff', borderRadius: 24,
-          padding: '40px 40px 36px',
+          padding: '32px 24px 28px',
           border: '1px solid var(--border)',
           boxShadow: '0 12px 48px rgba(15,23,42,0.10)'
         }}>

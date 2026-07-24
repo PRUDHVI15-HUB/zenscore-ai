@@ -218,11 +218,11 @@ export default function Skills() {
           {/* EXPLORE */}
           {activeTab === 'explore' && (
             <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 28 }}>
                 <SectionHeader icon="🔍" title="Explore Skill Categories" desc="Click a category to view the full roadmap" />
-                <input placeholder="Search skills..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} style={{ height: 40, padding: '0 14px 0 14px', borderRadius: 20, border: '1.5px solid var(--border)', fontSize: 13.5, outline: 'none', width: 220 }} />
+                <input placeholder="Search skills..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} style={{ height: 40, padding: '0 14px 0 14px', borderRadius: 20, border: '1.5px solid var(--border)', fontSize: 13.5, outline: 'none', width: '100%', maxWidth: 220 }} />
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 24 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 24 }}>
                 {filtered.map(skill => {
                   const progress = getProgress(skill.id)
                   return (
