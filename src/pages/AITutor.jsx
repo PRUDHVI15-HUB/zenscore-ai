@@ -4,7 +4,9 @@ import { useAuth } from '../context/AuthContext'
 import { getToken } from '../services/api'
 
 const YOUTUBE_API_KEY = import.meta.env.VITE_YOUTUBE_API_KEY
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+const rawBase = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+const cleanBase = rawBase.replace(/\/+$/, '')
+const API_URL = cleanBase.endsWith('/api') ? cleanBase : `${cleanBase}/api`
 
 const suggestions = [
   { icon: '⚡', label: 'DSA', text: 'Explain Binary Search Tree with examples' },

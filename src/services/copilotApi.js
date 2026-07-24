@@ -5,7 +5,9 @@
  * to avoid coupling concerns.
  */
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+const rawBase = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+const cleanBase = rawBase.replace(/\/+$/, '')
+const BASE_URL = cleanBase.endsWith('/api') ? cleanBase : `${cleanBase}/api`
 const getToken = () => localStorage.getItem('zenscore_jwt')
 
 /**
