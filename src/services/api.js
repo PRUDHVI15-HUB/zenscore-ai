@@ -4,7 +4,10 @@ import { syncProductivityToProfile } from './profileSync/productivityProfileSync
 const localBase = 'http://localhost:5000/api'
 const cloudBase = 'https://zenscore-backend.onrender.com/api'
 
-const configuredBase = (import.meta.env.VITE_API_URL || localBase).replace(/\/+$/, '')
+const isLocalhost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+const defaultBase = isLocalhost ? localBase : cloudBase
+
+const configuredBase = (import.meta.env.VITE_API_URL || defaultBase).replace(/\/+$/, '')
 const PRIMARY_URL = configuredBase.endsWith('/api') ? configuredBase : `${configuredBase}/api`
 const FALLBACK_URL = PRIMARY_URL.includes('localhost') ? cloudBase : localBase
 
