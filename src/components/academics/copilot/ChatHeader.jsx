@@ -5,6 +5,7 @@
  * All props/callbacks/confirmation overlay logic untouched.
  */
 import React, { useState } from 'react'
+import ZenScoreIcon from '../../common/ZenScoreIcon'
 
 export default function ChatHeader({
   onClear,
@@ -45,7 +46,8 @@ export default function ChatHeader({
       aria-label="AI Academic Copilot header"
     >
       {/* Left */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <ZenScoreIcon size={24} />
         <span style={{
           fontSize: 10.5,
           fontWeight: 750,

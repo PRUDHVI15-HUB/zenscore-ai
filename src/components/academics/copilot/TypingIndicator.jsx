@@ -5,6 +5,7 @@
  * All logic/STAGES array untouched.
  */
 import React, { useState, useEffect } from 'react'
+import ZenScoreIcon from '../../common/ZenScoreIcon'
 
 const STAGES = [
   'Analyzing academic record…',
@@ -43,25 +44,7 @@ export default function TypingIndicator() {
       aria-label="ZenScore AI is thinking"
     >
       {/* Bot Avatar */}
-      <div style={{
-        width: 32,
-        height: 32,
-        borderRadius: 10,
-        background: 'linear-gradient(135deg, #7C3AED, #4F46E5)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: '#fff',
-        flexShrink: 0,
-        boxShadow: '0 2px 8px rgba(124,58,237,0.2)',
-      }}
-      aria-hidden="true"
-      >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/>
-          <path d="M8 12h.01M12 12h.01M16 12h.01"/>
-        </svg>
-      </div>
+      <ZenScoreIcon size={32} />
 
       {/* Bubble */}
       <div style={{

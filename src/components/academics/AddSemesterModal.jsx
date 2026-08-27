@@ -65,7 +65,7 @@ export default function AddSemesterModal({
       onClick={onClose}
     >
       <div 
-        className="w-full纵 max-w-md bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-6 md:p-8 shadow-2xl flex flex-col gap-6 animate-scale-up text-left"
+        className="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-6 md:p-8 shadow-2xl flex flex-col gap-6 animate-scale-up text-left"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}

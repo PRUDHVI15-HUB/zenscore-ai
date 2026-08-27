@@ -125,6 +125,7 @@ export default function StudyGroups() {
               <div style={{ fontFamily: 'Sora,sans-serif', fontWeight: 700, fontSize: 18 }}>No rooms found</div>
               <div style={{ color: 'var(--text-muted)', marginTop: 8 }}>Try different filters</div>
             </div>
+          )}
         </div>
     </AppLayout>
   )

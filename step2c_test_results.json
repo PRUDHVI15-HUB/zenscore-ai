@@ -1,0 +1,77 @@
+{
+  "total": 16,
+  "passed": 13,
+  "failed": 3,
+  "details": [
+    {
+      "name": "PHASE 3.1: Empty Analytics hasData and counts",
+      "status": "FAIL",
+      "error": "Expected values to be strictly equal:\n\n'0 min' !== '0.0 hrs'\n",
+      "stack": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n'0 min' !== '0.0 hrs'\n\n    at file:///C:/Users/USER/Desktop/zenscore-ai/zenscore-ai/dist_step2c.mjs:1714:10\n    at runTest (file:///C:/Users/USER/Desktop/zenscore-ai/zenscore-ai/dist_step2c.mjs:1681:5)\n    at file:///C:/Users/USER/Desktop/zenscore-ai/zenscore-ai/dist_step2c.mjs:1710:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:430:25)\n    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:661:26)\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+    },
+    {
+      "name": "PHASE 3.2: Empty Profile Sync Summary rejects fake values",
+      "status": "PASS"
+    },
+    {
+      "name": "PHASE 3.3: Empty Health Metrics returns honest defaults",
+      "status": "FAIL",
+      "error": "Expected values to be strictly equal:\n\nundefined !== 0\n",
+      "stack": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\nundefined !== 0\n\n    at file:///C:/Users/USER/Desktop/zenscore-ai/zenscore-ai/dist_step2c.mjs:1738:10\n    at runTest (file:///C:/Users/USER/Desktop/zenscore-ai/zenscore-ai/dist_step2c.mjs:1681:5)\n    at file:///C:/Users/USER/Desktop/zenscore-ai/zenscore-ai/dist_step2c.mjs:1735:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:430:25)\n    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:661:26)\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+    },
+    {
+      "name": "PHASE 4.1: createSessionObject preserves topic, category, goal, and sets clientSessionId & XP",
+      "status": "PASS"
+    },
+    {
+      "name": "PHASE 4.2: Session storage round-trip in localStorage",
+      "status": "PASS"
+    },
+    {
+      "name": "PHASE 5.1: Backend FocusLog Schema structure & compound indexes",
+      "status": "PASS"
+    },
+    {
+      "name": "PHASE 6.1: XP calculation bounds (1 min = 1 XP, min 1, max 120)",
+      "status": "PASS"
+    },
+    {
+      "name": "PHASE 9.1: syncProductivityToProfile executes without throwing ReferenceError",
+      "status": "PASS"
+    },
+    {
+      "name": "PHASE 10.1: Deterministic Controlled Analytics Calculation",
+      "status": "FAIL",
+      "error": "Cannot read properties of undefined (reading 'length')",
+      "stack": "TypeError: Cannot read properties of undefined (reading 'length')\n    at file:///C:/Users/USER/Desktop/zenscore-ai/zenscore-ai/dist_step2c.mjs:1867:49\n    at runTest (file:///C:/Users/USER/Desktop/zenscore-ai/zenscore-ai/dist_step2c.mjs:1681:5)\n    at file:///C:/Users/USER/Desktop/zenscore-ai/zenscore-ai/dist_step2c.mjs:1854:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:430:25)\n    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:661:26)\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"
+    },
+    {
+      "name": "PHASE 11.1: Session history filters by query, category, and date range",
+      "status": "PASS"
+    },
+    {
+      "name": "PHASE 12.1: AI Coach consumes real user metrics in fallback mode",
+      "status": "PASS"
+    },
+    {
+      "name": "PHASE 15.1: Zero leaked backend secrets in frontend source files",
+      "status": "PASS"
+    },
+    {
+      "name": "PHASE 17.1: Zero hardcoded synthetic numbers in active productivity code",
+      "status": "PASS"
+    },
+    {
+      "name": "PHASE 7.1: addFocusLog input validation rejects invalid inputs",
+      "status": "PASS"
+    },
+    {
+      "name": "PHASE 8.1: deleteFocusLog rejects malformed ObjectIds with clean 400",
+      "status": "PASS"
+    },
+    {
+      "name": "PHASE 13.1: dispatchAIAction handles COMPLETE_FOCUS_SESSION & UPDATE_PRODUCTIVITY_SCORE",
+      "status": "PASS"
+    }
+  ]
+}

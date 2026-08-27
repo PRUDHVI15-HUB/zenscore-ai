@@ -40,46 +40,58 @@ export default function SubjectPreviewTable({
         <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
           {subjects.map((sub, idx) => {
             const isDuplicate = sub.duplicate === true
-            const isPassed = sub.finalGrade !== null && sub.finalGrade >= 4
+            // Detect failed subject: explicit FAIL result, 'F'/'RA'/'W' rawGrade, or grade point < 4 on 10-pt scale
+            const rawGradeStr = String(sub.rawGrade || '').trim().toUpperCase()
+            const isFailedGrade = rawGradeStr === 'F' || rawGradeStr === 'RA' || rawGradeStr === 'W' || rawGradeStr === 'AB'
+            const isFailedResult = sub.result === 'FAIL' || sub.result === 'F'
+            const isFailedPoints = sub.finalGrade !== null && sub.finalGrade !== undefined && sub.finalGrade < 4
+            const isFailed = isFailedResult || isFailedGrade || isFailedPoints
+            const isPassed = !isFailed && sub.finalGrade !== null && sub.finalGrade !== undefined && sub.finalGrade >= 4
 
             return (
               <tr
                 key={sub.id || idx}
                 className={`transition-all ${
-                  isDuplicate
+                  isFailed
+                    ? 'bg-rose-50/60 dark:bg-rose-950/20'
+                    : isDuplicate
                     ? 'bg-amber-50/30 dark:bg-amber-950/10'
                     : 'hover:bg-slate-50/70 dark:hover:bg-slate-800/40'
                 }`}
               >
                 {/* Subject Name */}
                 <td className="px-4 py-2.5">
-                  <input
-                    type="text"
-                    value={sub.name || ''}
-                    onChange={(e) => onSubjectChange?.(sub.id, 'name', e.target.value)}
-                    className={`w-full px-2.5 py-1.5 rounded-lg border outline-none font-semibold text-slate-900 dark:text-slate-100 bg-transparent transition-all ${
-                      getCellStatus(sub.id, 'name') === 'error'
-                        ? 'border-rose-400 focus:border-rose-500 bg-rose-50/20 text-rose-700 dark:text-rose-400'
-                        : getCellStatus(sub.id, 'name') === 'repaired'
-                        ? 'border-indigo-400 focus:border-indigo-500 bg-indigo-50/10 text-indigo-600 dark:text-indigo-400'
-                        : 'border-transparent hover:border-slate-300 dark:hover:border-slate-700 focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-950'
-                    }`}
-                  />
+                  <div className="flex items-center gap-2">
+                    {isFailed && <span title="Arrear / Failed Subject" style={{ fontSize: 12 }}>🔴</span>}
+                    <input
+                      type="text"
+                      value={sub.name || ''}
+                      onChange={(e) => onSubjectChange?.(sub.id || sub._id || idx, 'name', e.target.value)}
+                      className={`w-full px-2.5 py-1.5 rounded-lg border outline-none font-semibold text-slate-900 dark:text-slate-100 bg-transparent transition-all ${
+                        getCellStatus(sub.id || sub._id || idx, 'name') === 'error'
+                          ? 'border-rose-400 focus:border-rose-500 bg-rose-50/20 text-rose-700 dark:text-rose-400'
+                          : getCellStatus(sub.id || sub._id || idx, 'name') === 'repaired'
+                          ? 'border-indigo-400 focus:border-indigo-500 bg-indigo-50/10 text-indigo-600 dark:text-indigo-400'
+                          : 'border-transparent hover:border-slate-300 dark:hover:border-slate-700 focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-950'
+                      }`}
+                    />
+                  </div>
                 </td>
 
                 {/* Credits */}
                 <td className="px-4 py-2.5">
                   <input
                     type="number"
+                    step="0.5"
                     value={sub.credits === null || sub.credits === undefined ? '' : sub.credits}
                     onChange={(e) => {
-                      const val = e.target.value === '' ? null : parseInt(e.target.value, 10)
-                      onSubjectChange?.(sub.id, 'credits', val)
+                      const val = e.target.value === '' ? null : parseFloat(e.target.value)
+                      onSubjectChange?.(sub.id || sub._id || idx, 'credits', val)
                     }}
                     className={`w-full max-w-16 mx-auto px-2 py-1.5 text-center rounded-lg border outline-none font-bold text-slate-900 dark:text-slate-100 bg-transparent transition-all ${
-                      getCellStatus(sub.id, 'credits') === 'error'
+                      getCellStatus(sub.id || sub._id || idx, 'credits') === 'error'
                         ? 'border-rose-400 focus:border-rose-500 bg-rose-50/20 text-rose-700 dark:text-rose-400'
-                        : getCellStatus(sub.id, 'credits') === 'repaired'
+                        : getCellStatus(sub.id || sub._id || idx, 'credits') === 'repaired'
                         ? 'border-indigo-400 focus:border-indigo-500 bg-indigo-50/10 text-indigo-600 dark:text-indigo-400'
                         : 'border-transparent hover:border-slate-300 dark:hover:border-slate-700 focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-950'
                     }`}
@@ -91,13 +103,15 @@ export default function SubjectPreviewTable({
                   <input
                     type="text"
                     value={sub.rawGrade || ''}
-                    onChange={(e) => onSubjectChange?.(sub.id, 'rawGrade', e.target.value)}
-                    className={`w-full max-w-16 mx-auto px-2 py-1.5 text-center rounded-lg border outline-none font-bold text-slate-900 dark:text-slate-100 bg-transparent transition-all ${
-                      getCellStatus(sub.id, 'rawGrade') === 'error'
+                    onChange={(e) => onSubjectChange?.(sub.id || sub._id || idx, 'rawGrade', e.target.value)}
+                    className={`w-full max-w-16 mx-auto px-2 py-1.5 text-center rounded-lg border outline-none font-bold bg-transparent transition-all ${
+                      isFailed
+                        ? 'border-rose-400 text-rose-600 dark:text-rose-400 bg-rose-50/10'
+                        : getCellStatus(sub.id || sub._id || idx, 'rawGrade') === 'error'
                         ? 'border-rose-400 focus:border-rose-500 bg-rose-50/20 text-rose-700 dark:text-rose-400'
-                        : getCellStatus(sub.id, 'rawGrade') === 'repaired'
+                        : getCellStatus(sub.id || sub._id || idx, 'rawGrade') === 'repaired'
                         ? 'border-indigo-400 focus:border-indigo-500 bg-indigo-50/10 text-indigo-600 dark:text-indigo-400'
-                        : 'border-transparent hover:border-slate-300 dark:hover:border-slate-700 focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-955'
+                        : 'border-transparent text-slate-900 dark:text-slate-100 hover:border-slate-300 dark:hover:border-slate-700 focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-955'
                     }`}
                   />
                 </td>
@@ -106,18 +120,20 @@ export default function SubjectPreviewTable({
                 <td className="px-4 py-2.5">
                   <input
                     type="number"
-                    step="0.01"
+                    step="0.1"
                     value={sub.finalGrade === null || sub.finalGrade === undefined ? '' : sub.finalGrade}
                     onChange={(e) => {
                       const val = e.target.value === '' ? null : parseFloat(e.target.value)
-                      onSubjectChange?.(sub.id, 'finalGrade', val)
+                      onSubjectChange?.(sub.id || sub._id || idx, 'finalGrade', val)
                     }}
-                    className={`w-full max-w-16 mx-auto px-2 py-1.5 text-center rounded-lg border outline-none font-bold text-slate-900 dark:text-slate-100 bg-transparent transition-all ${
-                      getCellStatus(sub.id, 'finalGrade') === 'error'
+                    className={`w-full max-w-16 mx-auto px-2 py-1.5 text-center rounded-lg border outline-none font-bold bg-transparent transition-all ${
+                      isFailed
+                        ? 'border-rose-400 text-rose-600 dark:text-rose-400 bg-rose-50/10'
+                        : getCellStatus(sub.id || sub._id || idx, 'finalGrade') === 'error'
                         ? 'border-rose-400 focus:border-rose-500 bg-rose-50/20 text-rose-700 dark:text-rose-400'
-                        : getCellStatus(sub.id, 'finalGrade') === 'repaired'
+                        : getCellStatus(sub.id || sub._id || idx, 'finalGrade') === 'repaired'
                         ? 'border-indigo-400 focus:border-indigo-500 bg-indigo-50/10 text-indigo-600 dark:text-indigo-400'
-                        : 'border-transparent hover:border-slate-300 dark:hover:border-slate-700 focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-955'
+                        : 'border-transparent text-slate-900 dark:text-slate-100 hover:border-slate-300 dark:hover:border-slate-700 focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-955'
                     }`}
                   />
                 </td>
@@ -125,16 +141,16 @@ export default function SubjectPreviewTable({
                 {/* Status Column */}
                 <td className="px-4 py-2.5 text-center">
                   <div className="flex items-center justify-center gap-1.5">
-                    {sub.result === 'PASS' || isPassed ? (
-                      <span className="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                        PASS
-                      </span>
-                    ) : sub.result === 'FAIL' ? (
+                    {isFailed ? (
                       <span className="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
                         FAIL
                       </span>
+                    ) : isPassed ? (
+                      <span className="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                        PASS
+                      </span>
                     ) : (
-                      <span className="text-slate-400">-</span>
+                      <span className="text-slate-400">—</span>
                     )}
                   </div>
                 </td>

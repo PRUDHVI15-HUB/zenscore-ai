@@ -10,10 +10,15 @@
   },
   "dependencies": {
     "firebase": "^10.14.1",
+    "framer-motion": "^11.11.17",
+    "jsonwebtoken": "^9.0.3",
     "lucide-react": "^1.26.0",
+    "motion-dom": "^12.43.0",
+    "motion-utils": "^12.39.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-router-dom": "^6.22.0"
+    "react-router-dom": "^6.22.0",
+    "recharts": "^3.10.1"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.2.1",

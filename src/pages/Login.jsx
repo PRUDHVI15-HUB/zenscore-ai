@@ -1,19 +1,28 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { sendPasswordResetEmail } from 'firebase/auth'
 import { auth } from '../firebase'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
+import ZenScoreLogo from '../components/common/ZenScoreLogo'
+import { isOnboardingCompleted, setOnboardingCompleted } from '../utils/onboardingUtils'
 
 export default function Login() {
-  const { loginWithGoogle, loginWithEmail } = useAuth()
+  const { user, loading: authLoading, loginWithGoogle, loginWithEmail } = useAuth()
   const navigate = useNavigate()
   const [form, setForm] = useState({ email: '', password: '' })
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+
+  useEffect(() => {
+    if (!authLoading && user) {
+      navigate('/dashboard', { replace: true })
+    }
+  }, [user, authLoading, navigate])
+
 
   const handleChange = (e) => setForm(p => ({ ...p, [e.target.name]: e.target.value }))
 
@@ -22,10 +31,19 @@ export default function Login() {
     setError('')
     setSuccess('')
     try {
-      await loginWithGoogle()
-      navigate('/dashboard')
+      const result = await loginWithGoogle()
+      const firebaseUser = result?.user || auth.currentUser
+      const backendUserData = result?.backendUser
+      
+      if (isOnboardingCompleted(firebaseUser, backendUserData)) {
+        navigate('/dashboard')
+      } else {
+        navigate('/onboarding')
+      }
     } catch (err) {
-      setError('Google login failed. Please try again.')
+      if (err?.code !== 'auth/popup-closed-by-user' && err?.code !== 'auth/cancelled-popup-request') {
+        setError(err?.message || 'Google login failed. Please try again.')
+      }
     } finally {
       setLoading(false)
     }
@@ -42,12 +60,19 @@ export default function Login() {
 
     setLoading(true)
     try {
-      await loginWithEmail(form.email, form.password)
+      const result = await loginWithEmail(form.email, form.password)
+      const firebaseUser = result?.user || auth.currentUser
+      const uid = firebaseUser?.uid || form.email
+      
+      // Existing registered users logging in with credentials go straight to dashboard
+      setOnboardingCompleted(uid, true)
       navigate('/dashboard')
     } catch (err) {
-      console.error(err)
+      console.error('Login error:', err)
       // Form fields are preserved so users do not lose their typed information
-      if (err.code === 'auth/wrong-password') {
+      if (err.code === 'auth/network-request-failed') {
+        setError('Network Error: Unable to reach Firebase authentication servers. Please check your internet connection or DNS/VPN settings.')
+      } else if (err.code === 'auth/wrong-password') {
         setError('Incorrect password. Please verify your password and try again.')
       } else if (err.code === 'auth/user-not-found') {
         setError('No account exists with this email address. Please sign up first.')
@@ -55,8 +80,10 @@ export default function Login() {
         setError('Incorrect email or password. Please verify your password and try again.')
       } else if (err.code === 'auth/invalid-email') {
         setError('Please enter a valid email address.')
+      } else if (err.code === 'auth/too-many-requests') {
+        setError('Access temporarily disabled due to many failed attempts. Try again later or reset your password.')
       } else {
-        setError('Login failed. Please try again.')
+        setError(err.message || 'Login failed. Please try again.')
       }
     } finally {
       setLoading(false)
@@ -122,14 +149,9 @@ export default function Login() {
 
           {/* Header */}
           <div style={{ textAlign: 'center', marginBottom: 32 }}>
-            <Link to="/" style={{
-              fontFamily: 'Sora, sans-serif', fontWeight: 700, fontSize: 20,
-              color: 'var(--primary)', textDecoration: 'none',
-              display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 20
-            }}>
-              <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--accent)', display: 'inline-block' }} />
-              ZenScore <span style={{ color: 'var(--accent2)' }}>AI</span>
-            </Link>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 20 }}>
+              <ZenScoreLogo size={42} to="/" />
+            </div>
             <h1 style={{
               fontFamily: 'Sora, sans-serif', fontSize: 24, fontWeight: 800,
               color: 'var(--text-dark)', marginBottom: 8, letterSpacing: '-0.5px'

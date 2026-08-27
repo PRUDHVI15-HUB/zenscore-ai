@@ -6,6 +6,7 @@
  * All props/callbacks/logic untouched.
  */
 import React, { useState, useEffect, memo } from 'react'
+import ZenScoreIcon from '../../common/ZenScoreIcon'
 
 const CLASSIFICATION_MAP = {
   'CGPA':             { label: 'CGPA',         color: '#2563EB', bg: '#EFF6FF' },
@@ -318,13 +319,12 @@ const MessageBubble = memo(function MessageBubble({
     : ''
 
   const [displayedContent, setDisplayedContent] = useState(() => (isStreaming ? '' : content))
-  const [localStreamingActive, setLocalStreamingActive] = useState(isStreaming)
+  const [localStreamingActive, setLocalStreamingActive] = useState(Boolean(isStreaming))
 
   useEffect(() => {
     if (!isStreaming || !content) {
-      setDisplayedContent(content)
+      setDisplayedContent(content || '')
       setLocalStreamingActive(false)
-      onStreamingComplete?.()
       return
     }
 
@@ -350,7 +350,7 @@ const MessageBubble = memo(function MessageBubble({
 
     timer = setTimeout(step, 30)
     return () => clearTimeout(timer)
-  }, [content, isStreaming, onStreamingComplete])
+  }, [content, isStreaming])
 
   if (isUser) {
     return (
@@ -383,25 +383,7 @@ const MessageBubble = memo(function MessageBubble({
   return (
     <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '2px 8px' }} role="listitem">
       {/* Bot Avatar */}
-      <div style={{
-        width: 32,
-        height: 32,
-        borderRadius: 10,
-        background: 'linear-gradient(135deg, #7C3AED, #4F46E5)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: '#fff',
-        flexShrink: 0,
-        boxShadow: '0 2px 8px rgba(124,58,237,0.2)',
-      }}
-      aria-hidden="true"
-      >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/>
-          <path d="M8 12h.01M12 12h.01M16 12h.01"/>
-        </svg>
-      </div>
+      <ZenScoreIcon size={32} />
 
       {/* Bot Card */}
       <div style={{

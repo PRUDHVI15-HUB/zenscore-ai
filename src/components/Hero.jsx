@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../context/AuthContext'
+import ZenScoreIcon from './common/ZenScoreIcon'
 
 export default function Hero() {
   const { loginWithGoogle, user } = useAuth()
@@ -31,13 +32,13 @@ export default function Hero() {
         {/* LEFT */}
         <div>
           <div style={{
-            display: 'inline-flex', alignItems: 'center', gap: 6,
+            display: 'inline-flex', alignItems: 'center', gap: 8,
             background: '#EFF6FF', color: 'var(--primary)',
-            fontSize: 13, fontWeight: 600, padding: '6px 14px', borderRadius: 20,
-            marginBottom: 20, fontFamily: 'Sora, sans-serif'
+            fontSize: 13, fontWeight: 700, padding: '6px 16px', borderRadius: 20,
+            marginBottom: 20, fontFamily: 'Sora, sans-serif', border: '1px solid #DBEAFE'
           }}>
-            <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--accent)' }} />
-            AI-Powered Platform
+            <ZenScoreIcon size={18} />
+            ZenScore AI — Student Ecosystem
           </div>
 
           <h1 className="hero-title" style={{
@@ -139,11 +140,21 @@ export default function Hero() {
 
           {/* Floating card */}
           <div style={{
-            position: 'absolute', bottom: -20, right: -20,
-            width: 220, background: '#fff', borderRadius: 16,
+            position: isMobile ? 'relative' : 'absolute',
+            bottom: isMobile ? 0 : -20,
+            right: isMobile ? 0 : -20,
+            marginTop: isMobile ? 16 : 0,
+            width: isMobile ? '100%' : 220,
+            background: '#fff',
+            borderRadius: 16,
             boxShadow: '0 16px 48px rgba(15,23,42,0.18)',
-            padding: 16, zIndex: 10,
-            display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: 110
+            padding: 16,
+            zIndex: 10,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            height: 110,
+            boxSizing: 'border-box'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <div style={{ width: 32, height: 32, borderRadius: 10, background: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

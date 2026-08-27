@@ -1,0 +1,302 @@
+{
+  "total": 47,
+  "passed": 47,
+  "failed": 0,
+  "suites": [
+    {
+      "name": "Auth Setup",
+      "tests": [
+        {
+          "name": "User 1 authenticated with valid JWT",
+          "status": "PASSED",
+          "details": ""
+        },
+        {
+          "name": "User 2 authenticated with distinct JWT",
+          "status": "PASSED",
+          "details": ""
+        }
+      ]
+    },
+    {
+      "name": "Public Endpoints",
+      "tests": [
+        {
+          "name": "GET /api/skills/categories returns 200 and categories array",
+          "status": "PASSED",
+          "details": "Count: 10"
+        },
+        {
+          "name": "GET /api/skills returns 200 with pagination and populated categories",
+          "status": "PASSED",
+          "details": "Total: 61"
+        },
+        {
+          "name": "GET /api/skills/recommended returns 200",
+          "status": "PASSED",
+          "details": ""
+        },
+        {
+          "name": "GET /api/roadmaps returns 200 with 5 complete engineering pathways",
+          "status": "PASSED",
+          "details": "Pathways: 5"
+        }
+      ]
+    },
+    {
+      "name": "User Analytics",
+      "tests": [
+        {
+          "name": "GET /api/skills/progress returns 200 with real progress metrics",
+          "status": "PASSED",
+          "details": "Overall Progress: 0%"
+        },
+        {
+          "name": "GET /api/skills/continue-learning returns 200 array",
+          "status": "PASSED",
+          "details": ""
+        }
+      ]
+    },
+    {
+      "name": "AI Recommendations",
+      "tests": [
+        {
+          "name": "GET /api/skills/ai-recommendations returns 200 with Hybrid Intelligence structure",
+          "status": "PASSED",
+          "details": "Role Readiness: 0%, Source: Deterministic Backend Calculation + Groq Explanation"
+        }
+      ]
+    },
+    {
+      "name": "Curriculum Integrity",
+      "tests": [
+        {
+          "name": "Skill 'react' loads full 21-lesson curriculum across 7 modules",
+          "status": "PASSED",
+          "details": "Lessons: 21, Modules: 7"
+        },
+        {
+          "name": "Skill 'react' Lesson 1 has rich content (objectives, concepts, syntax)",
+          "status": "PASSED",
+          "details": "Title: \"React Component Model & JSX Transpilation\""
+        },
+        {
+          "name": "Skill 'react' enforces sequential locks: L1 unlocked, L2 locked for fresh student",
+          "status": "PASSED",
+          "details": ""
+        },
+        {
+          "name": "Skill 'python' loads full 21-lesson curriculum across 7 modules",
+          "status": "PASSED",
+          "details": "Lessons: 21, Modules: 7"
+        },
+        {
+          "name": "Skill 'python' Lesson 1 has rich content (objectives, concepts, syntax)",
+          "status": "PASSED",
+          "details": "Title: \"Python Execution Model: Bytecode, CPython & The GIL\""
+        },
+        {
+          "name": "Skill 'python' enforces sequential locks: L1 unlocked, L2 locked for fresh student",
+          "status": "PASSED",
+          "details": ""
+        },
+        {
+          "name": "Skill 'nodejs' loads full 21-lesson curriculum across 7 modules",
+          "status": "PASSED",
+          "details": "Lessons: 21, Modules: 7"
+        },
+        {
+          "name": "Skill 'nodejs' Lesson 1 has rich content (objectives, concepts, syntax)",
+          "status": "PASSED",
+          "details": "Title: \"Node.js Architecture: V8 Engine, libuv & Thread Pool\""
+        },
+        {
+          "name": "Skill 'nodejs' enforces sequential locks: L1 unlocked, L2 locked for fresh student",
+          "status": "PASSED",
+          "details": ""
+        },
+        {
+          "name": "Skill 'docker' loads full 21-lesson curriculum across 7 modules",
+          "status": "PASSED",
+          "details": "Lessons: 21, Modules: 7"
+        },
+        {
+          "name": "Skill 'docker' Lesson 1 has rich content (objectives, concepts, syntax)",
+          "status": "PASSED",
+          "details": "Title: \"Docker Architecture, Images & Container Lifecycle\""
+        },
+        {
+          "name": "Skill 'docker' enforces sequential locks: L1 unlocked, L2 locked for fresh student",
+          "status": "PASSED",
+          "details": ""
+        },
+        {
+          "name": "Skill 'mongodb' loads full 21-lesson curriculum across 7 modules",
+          "status": "PASSED",
+          "details": "Lessons: 21, Modules: 7"
+        },
+        {
+          "name": "Skill 'mongodb' Lesson 1 has rich content (objectives, concepts, syntax)",
+          "status": "PASSED",
+          "details": "Title: \"SQL vs NoSQL: Relational vs Document Databases\""
+        },
+        {
+          "name": "Skill 'mongodb' enforces sequential locks: L1 unlocked, L2 locked for fresh student",
+          "status": "PASSED",
+          "details": ""
+        }
+      ]
+    },
+    {
+      "name": "Lesson Progression",
+      "tests": [
+        {
+          "name": "Enrolled in test skill 'python'",
+          "status": "PASSED",
+          "details": ""
+        },
+        {
+          "name": "Stage 1: Learn stage completion recorded",
+          "status": "PASSED",
+          "details": ""
+        },
+        {
+          "name": "Stage 2A: Quiz scoring evaluates fail (<70%) correctly",
+          "status": "PASSED",
+          "details": "Score: 0%"
+        },
+        {
+          "name": "Stage 2B: Quiz scoring evaluates pass (>=70%) correctly",
+          "status": "PASSED",
+          "details": "Score: 100%"
+        },
+        {
+          "name": "Stage 3A: Practical task verification fails on incorrect input",
+          "status": "PASSED",
+          "details": ""
+        },
+        {
+          "name": "Stage 3B: Practical task verification passes on correct solution",
+          "status": "PASSED",
+          "details": ""
+        },
+        {
+          "name": "Lesson 1 marked complete -> Progress increases & Lesson 2 unlocks",
+          "status": "PASSED",
+          "details": "New completion %: 5%"
+        },
+        {
+          "name": "Lesson 1 is marked as completed in workspace state",
+          "status": "PASSED",
+          "details": ""
+        },
+        {
+          "name": "Lesson 2 is now sequentially unlocked (isLocked: false)",
+          "status": "PASSED",
+          "details": ""
+        }
+      ]
+    },
+    {
+      "name": "Sandbox Security",
+      "tests": [
+        {
+          "name": "Safe shell command execution allowed",
+          "status": "PASSED",
+          "details": ""
+        },
+        {
+          "name": "Forbidden security pattern blocked by sandbox policy",
+          "status": "PASSED",
+          "details": ""
+        }
+      ]
+    },
+    {
+      "name": "Interactive Tools",
+      "tests": [
+        {
+          "name": "Saved personal note to MongoDB",
+          "status": "PASSED",
+          "details": ""
+        },
+        {
+          "name": "Retrieved saved note successfully for User 1",
+          "status": "PASSED",
+          "details": ""
+        },
+        {
+          "name": "Lesson bookmark toggled ON",
+          "status": "PASSED",
+          "details": ""
+        },
+        {
+          "name": "Lesson bookmark toggled OFF",
+          "status": "PASSED",
+          "details": ""
+        },
+        {
+          "name": "AI Tutor returns context-grounded explanation from Groq",
+          "status": "PASSED",
+          "details": ""
+        }
+      ]
+    },
+    {
+      "name": "Data Isolation",
+      "tests": [
+        {
+          "name": "User 2 cannot see User 1 note (Data Isolation verified)",
+          "status": "PASSED",
+          "details": ""
+        }
+      ]
+    },
+    {
+      "name": "Certificates",
+      "tests": [
+        {
+          "name": "Skill reached 100% mastery (actual: 100%)",
+          "status": "PASSED",
+          "details": ""
+        },
+        {
+          "name": "Verifiable Certificate document automatically generated with real ID",
+          "status": "PASSED",
+          "details": "Certificate ID: ZSC-2026-616276"
+        },
+        {
+          "name": "GET /api/skills/certificate/:skillId returns authentic certificate",
+          "status": "PASSED",
+          "details": ""
+        }
+      ]
+    },
+    {
+      "name": "Cross-Module Integration",
+      "tests": [
+        {
+          "name": "Career Module endpoint responsive & intact",
+          "status": "PASSED",
+          "details": ""
+        },
+        {
+          "name": "Student Profile / Brain service responsive",
+          "status": "PASSED",
+          "details": ""
+        }
+      ]
+    },
+    {
+      "name": "Security & Error Handling",
+      "tests": [
+        {
+          "name": "Non-existent skill ID handled gracefully without crash",
+          "status": "PASSED",
+          "details": ""
+        }
+      ]
+    }
+  ]
+}

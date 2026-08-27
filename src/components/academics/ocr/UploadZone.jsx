@@ -103,7 +103,7 @@ export default function UploadZone({ onFileSelected }) {
             />
           </svg>
           <div className="text-sm font-semibold text-slate-800 dark:text-slate-200">
-            Drag &amp; drop your transcript here
+            Drag &amp; drop your semester memo here
           </div>
           <div className="text-xs text-slate-550 dark:text-slate-400">
             or click to browse from files (Max 5MB)

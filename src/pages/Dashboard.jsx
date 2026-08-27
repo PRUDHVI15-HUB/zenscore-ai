@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { useStudentProfile } from '../context/StudentProfileContext'
+import { useCareer } from '../context/CareerContext'
+import { resolveCanonicalCareerGoal } from '../services/careers/careerNormalizer'
 import { getAcademicDashboard } from '../services/api'
 import AppLayout from '../components/AppLayout'
 import { 
@@ -44,11 +47,35 @@ export default function Dashboard() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
+  
+  // Read Unified Student Profile
+  const {
+    basicProfile,
+    academicSummary,
+    careerProfile,
+    skillsSummary,
+    coursesSummary,
+    jobsSummary,
+    productivitySummary
+  } = useStudentProfile()
+
+  const basic = basicProfile?.data || {}
+  const academic = academicSummary?.data || {}
+  const career = careerProfile?.data || {}
+  const skills = skillsSummary?.data || {}
+  const courses = coursesSummary?.data || {}
+  const jobs = jobsSummary?.data || {}
+  const productivity = productivitySummary?.data || {}
+
+  const careerCtx = useCareer()
+  const studentProfileCtx = useStudentProfile()
+  const targetCareerRole = resolveCanonicalCareerGoal(studentProfileCtx?.profile, careerCtx, career?.selectedCareerGoal || career?.targetCareer)
+
   const [academics, setAcademics] = useState(null)
   const [tip] = useState(tips[Math.floor(Math.random() * tips.length)])
   const [time, setTime] = useState(new Date())
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false)
-  const studentName = user?.displayName || 'Student'
+  const studentName = basic.name || user?.displayName || 'Student'
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768)
@@ -102,39 +129,110 @@ export default function Dashboard() {
               </button>
             </div>
 
-            {/* Illustration */}
+            {/* Standardized Glassmorphic Profile Snapshot Card */}
             {!isMobile && (
-              <div style={{ zIndex: 2, display: 'flex', alignItems: 'center' }}>
-                <img 
-                  src="/student-image.png" 
-                  alt="Student Illustration" 
-                  style={{ height: 140, objectFit: 'contain', filter: 'drop-shadow(0 8px 24px rgba(0,0,0,0.15))' }}
-                  onError={(e) => { e.target.style.display = 'none' }}
-                />
+              <div
+                style={{
+                  zIndex: 2,
+                  background: 'rgba(255, 255, 255, 0.16)',
+                  backdropFilter: 'blur(16px)',
+                  WebkitBackdropFilter: 'blur(16px)',
+                  border: '1px solid rgba(255, 255, 255, 0.28)',
+                  borderRadius: 18,
+                  padding: '16px 20px',
+                  color: '#FFFFFF',
+                  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 6,
+                  width: 230
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, color: 'rgba(255, 255, 255, 0.85)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    <Sparkles size={13} style={{ color: '#FDE047' }} />
+                    <span>Active Profile</span>
+                  </div>
+                  <span style={{ fontSize: 10, fontWeight: 700, background: 'rgba(255,255,255,0.2)', padding: '2px 7px', borderRadius: 10 }}>
+                    Live
+                  </span>
+                </div>
+
+                <div style={{ fontFamily: 'Sora, sans-serif', fontSize: 15, fontWeight: 800, color: '#FFFFFF', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {targetCareerRole && targetCareerRole.trim().length > 0 ? targetCareerRole : 'Set Career Goal'}
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 4, paddingTop: 6, borderTop: '1px solid rgba(255,255,255,0.18)' }}>
+                  <span style={{ fontSize: 11.5, color: 'rgba(255, 255, 255, 0.8)' }}>ZenScore</span>
+                  <span style={{ fontFamily: 'Sora, sans-serif', fontSize: 13, fontWeight: 800, color: '#FDE047' }}>
+                    {academic?.academicHealth ? `${academic.academicHealth}%` : (academics?.cgpa ? `${(academics.cgpa * 10).toFixed(0)}%` : '88%')}
+                  </span>
+                </div>
               </div>
             )}
           </div>
 
           {/* Metrics Grid */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: isMobile ? 16 : 24 }}>
-            {[
-              { Icon: GraduationCap, label: 'Current CGPA', value: academics?.cgpa ? academics.cgpa.toFixed(2) : '—', sub: 'Overall GPA', color: '#2563EB', bg: '#EFF6FF', trend: 'M0,18 Q25,3 50,12 T100,2' },
-              { Icon: CalendarDays, label: 'Semesters', value: academics?.semesters?.length || 0, sub: 'Completed', color: '#7C3AED', bg: '#F3F0FF', trend: 'M0,15 L30,15 L60,5 L100,5' },
-              { Icon: AlertCircle, label: 'Weak Subjects', value: academics?.weakSubjects?.length || 0, sub: 'Need attention', color: '#EA580C', bg: '#FFF7ED', trend: 'M0,12 Q30,5 60,20 T100,8' },
-              { Icon: TrendingUp, label: 'Predicted GPA', value: academics?.predictedNextGPA ? academics.predictedNextGPA.toFixed(2) : '—', sub: 'Next semester', color: '#10B981', bg: '#EBFDF5', trend: 'M0,18 Q25,5 50,12 T100,2' },
-            ].map(s => (
-              <div key={s.label} style={{ background: '#fff', borderRadius: 20, padding: 20, border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+            {(() => {
+              const hasSemesters = (academics?.semesters?.length > 0) || (academic?.completedSemesters > 0)
+              const currentCGPAValue = academics?.cgpa ?? academic?.currentCGPA ?? null
+              const totalSemestersCount = academics?.semesters?.length ?? academic?.completedSemesters ?? 0
+              const totalCreditsCount = academic?.totalCredits ?? academics?.totalCredits ?? 0
+              const weakCount = academics?.weakSubjects?.length ?? 0
+              const predictedValue = academics?.predictedNextGPA ?? academic?.predictedCGPA ?? (currentCGPAValue ? currentCGPAValue + 0.16 : null)
+
+              return [
+                { 
+                  Icon: GraduationCap, 
+                  label: 'Current CGPA', 
+                  value: currentCGPAValue ? Number(currentCGPAValue).toFixed(2) : '—', 
+                  sub: hasSemesters ? (academic.academicHealth ? `Health: ${academic.academicHealth}` : 'Overall CGPA') : 'No transcript uploaded', 
+                  color: '#2563EB', 
+                  bg: 'rgba(37, 99, 235, 0.12)', 
+                  trend: 'M0,18 Q25,3 50,12 T100,2' 
+                },
+                { 
+                  Icon: CalendarDays, 
+                  label: 'Semesters', 
+                  value: totalSemestersCount, 
+                  sub: `${totalCreditsCount} Credits Earned`, 
+                  color: '#7C3AED', 
+                  bg: 'rgba(124, 58, 237, 0.12)', 
+                  trend: 'M0,15 L30,15 L60,5 L100,5' 
+                },
+                { 
+                  Icon: AlertCircle, 
+                  label: 'Weak Subjects', 
+                  value: weakCount, 
+                  sub: hasSemesters ? ((weakCount > 0) ? `${weakCount} subjects need attention` : '🎉 All subjects passed cleanly') : 'No backlogs recorded', 
+                  color: '#EA580C', 
+                  bg: 'rgba(234, 88, 12, 0.12)', 
+                  trend: 'M0,12 Q30,5 60,20 T100,8' 
+                },
+                { 
+                  Icon: TrendingUp, 
+                  label: 'Predicted GPA', 
+                  value: predictedValue ? Number(predictedValue).toFixed(2) : '—', 
+                  sub: hasSemesters ? (targetCareerRole ? `Goal: ${targetCareerRole}` : 'Semester forecast') : 'Upload transcript to unlock', 
+                  color: '#10B981', 
+                  bg: 'rgba(16, 185, 129, 0.12)', 
+                  trend: 'M0,18 Q25,5 50,12 T100,2' 
+                },
+              ]
+            })().map(s => (
+              <div key={s.label} style={{ background: 'var(--bg-soft, #fff)', borderRadius: 20, padding: 20, border: '1px solid var(--border, #E2E8F0)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
                   <div>
-                    <div style={{ fontSize: 11.5, color: '#94A3B8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 4 }}>{s.label}</div>
-                    <div style={{ fontFamily: 'Sora, sans-serif', fontSize: 26, fontWeight: 800, color: '#1E293B' }}>{s.value}</div>
+                    <div style={{ fontSize: 11.5, color: 'var(--text-muted, #94A3B8)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 4 }}>{s.label}</div>
+                    <div style={{ fontFamily: 'Sora, sans-serif', fontSize: 26, fontWeight: 800, color: 'var(--text-dark, #1E293B)' }}>{s.value}</div>
                   </div>
                   <div style={{ width: 42, height: 42, borderRadius: '50%', background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: s.color }}>
                     <s.Icon size={20} strokeWidth={2.5} />
                   </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto' }}>
-                  <div style={{ fontSize: 12, color: '#94A3B8', fontWeight: 600 }}>{s.sub}</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-muted, #94A3B8)', fontWeight: 600 }}>{s.sub}</div>
                   <svg width="80" height="20" viewBox="0 0 100 20" fill="none" style={{ marginLeft: 'auto' }}>
                     <path d={s.trend} stroke={s.color} strokeWidth="2" strokeLinecap="round" />
                   </svg>
@@ -147,8 +245,8 @@ export default function Dashboard() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: isMobile ? 16 : 24 }}>
             
             {/* Quick Access Grid Card */}
-            <div style={{ background: '#fff', borderRadius: 24, padding: isMobile ? 20 : 28, border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
-              <div style={{ fontFamily: 'Sora, sans-serif', fontSize: 16, fontWeight: 800, color: '#1E293B', marginBottom: 20 }}>
+            <div style={{ background: 'var(--bg-soft, #fff)', borderRadius: 24, padding: isMobile ? 20 : 28, border: '1px solid var(--border, #E2E8F0)', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+              <div style={{ fontFamily: 'Sora, sans-serif', fontSize: 16, fontWeight: 800, color: 'var(--text-dark, #1E293B)', marginBottom: 20 }}>
                 🚀 Quick Access
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: 12 }}>
@@ -157,16 +255,16 @@ export default function Dashboard() {
                     key={l.path} 
                     onClick={() => navigate(l.path)} 
                     style={{ 
-                      background: '#fff', 
+                      background: 'var(--bg, #fff)', 
                       borderRadius: 16, 
                       padding: '20px 12px', 
                       cursor: 'pointer', 
                       textAlign: 'center', 
-                      border: '1.5px solid #F1F5F9', 
+                      border: '1.5px solid var(--border, #F1F5F9)', 
                       transition: 'all 0.2s' 
                     }}
                     onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.borderColor = l.accent; e.currentTarget.style.boxShadow = '0 6px 16px rgba(15,23,42,0.04)' }}
-                    onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.borderColor = '#F1F5F9'; e.currentTarget.style.boxShadow = 'none' }}
+                    onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.borderColor = 'var(--border, #F1F5F9)'; e.currentTarget.style.boxShadow = 'none' }}
                   >
                     <div style={{ 
                       width: 44, 
@@ -181,16 +279,16 @@ export default function Dashboard() {
                     }}>
                       <l.Icon size={20} strokeWidth={2.5} />
                     </div>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: '#1E293B', fontFamily: 'Sora, sans-serif' }}>{l.label}</div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-dark, #1E293B)', fontFamily: 'Sora, sans-serif' }}>{l.label}</div>
                   </div>
                 ))}
               </div>
             </div>
 
             {/* Latest Semester List Card */}
-            <div style={{ background: '#fff', borderRadius: 24, padding: 28, border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyBetween: 'space-between', marginBottom: 20 }}>
-                <div style={{ fontFamily: 'Sora, sans-serif', fontSize: 16, fontWeight: 800, color: '#1E293B' }}>
+            <div style={{ background: 'var(--bg-soft, #fff)', borderRadius: 24, padding: isMobile ? '20px 16px' : '28px', border: '1px solid var(--border, #E2E8F0)', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+                <div style={{ fontFamily: 'Sora, sans-serif', fontSize: 16, fontWeight: 800, color: 'var(--text-dark, #1E293B)' }}>
                   📊 Latest Semester
                 </div>
                 {academics?.semesters?.length > 0 && (
@@ -201,13 +299,13 @@ export default function Dashboard() {
               {academics?.semesters?.length > 0 ? (
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 1 }}>
                   {academics.semesters[academics.semesters.length - 1].subjects.slice(0, 5).map((sub, i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', justifyBetween: 'space-between', padding: '12px 0', borderBottom: i < 4 ? '1px solid #F1F5F9' : 'none' }}>
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0', borderBottom: i < 4 ? '1px solid var(--border, #F1F5F9)' : 'none' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                         <span style={{ 
                           width: 32, 
                           height: 32, 
                           borderRadius: '50%', 
-                          background: '#F8FAFC', 
+                          background: 'var(--bg, #F8FAFC)', 
                           color: '#6366F1', 
                           display: 'flex', 
                           alignItems: 'center', 
@@ -216,7 +314,7 @@ export default function Dashboard() {
                         }}>
                           📗
                         </span>
-                        <span style={{ fontSize: 13, fontWeight: 700, color: '#334155' }}>{sub.name}</span>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-mid, #334155)' }}>{sub.name}</span>
                       </div>
                       <span style={{ 
                         fontFamily: 'Sora, sans-serif', 
@@ -224,8 +322,8 @@ export default function Dashboard() {
                         fontSize: 12, 
                         padding: '4px 10px',
                         borderRadius: 8,
-                        background: sub.grade >= 8.5 ? '#ECFDF5' : '#EFF6FF',
-                        color: sub.grade >= 8.5 ? '#059669' : '#3B82F6' 
+                        background: sub.grade >= 8.5 ? 'rgba(5, 150, 105, 0.15)' : 'rgba(59, 130, 246, 0.15)',
+                        color: sub.grade >= 8.5 ? '#10B981' : '#3B82F6' 
                       }}>
                         {sub.grade.toFixed(1)}
                       </span>
@@ -235,7 +333,7 @@ export default function Dashboard() {
               ) : (
                 <div style={{ textAlign: 'center', padding: '40px 0', margin: 'auto' }}>
                   <div style={{ fontSize: 36, marginBottom: 12 }}>📝</div>
-                  <div style={{ fontSize: 13.5, color: '#94A3B8', fontWeight: 600, marginBottom: 16 }}>No grades added yet. Add semesters to unlock predictions!</div>
+                  <div style={{ fontSize: 13.5, color: 'var(--text-muted, #94A3B8)', fontWeight: 600, marginBottom: 16 }}>No grades added yet. Add semesters to unlock predictions!</div>
                   <button onClick={() => navigate('/academics')} style={{ height: 40, padding: '0 24px', borderRadius: 12, background: 'linear-gradient(135deg, #2563EB, #7C3AED)', color: '#fff', border: 'none', cursor: 'pointer', fontFamily: 'Sora, sans-serif', fontWeight: 700, fontSize: 13, boxShadow: '0 4px 12px rgba(37,99,235,0.2)' }}>
                     Add Grades
                   </button>
@@ -246,10 +344,10 @@ export default function Dashboard() {
 
           {/* Today's Goal Bottom Bar */}
           <div style={{ 
-            background: '#fff', 
-            border: '1px solid #E2E8F0', 
+            background: 'var(--bg-soft, #fff)', 
+            border: '1px solid var(--border, #E2E8F0)', 
             borderRadius: 20, 
-            padding: '20px 24px', 
+            padding: isMobile ? '16px' : '20px 24px', 
             display: 'flex', 
             flexWrap: 'wrap',
             alignItems: 'center', 
@@ -257,20 +355,29 @@ export default function Dashboard() {
             gap: 16,
             boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-              <div style={{ width: 40, height: 40, borderRadius: '50%', display: 'flex', alignItems: 'center', justify: 'center', background: '#FFF1F2', color: '#F43F5E' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16, minWidth: 0 }}>
+              <div style={{ width: 40, height: 40, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(244, 63, 94, 0.12)', color: '#F43F5E', flexShrink: 0 }}>
                 <Target size={20} strokeWidth={2.5} />
               </div>
-              <div>
-                <span style={{ display: 'block', color: '#1E293B', fontSize: 13.5, fontWeight: 700 }}>Today's Goal</span>
-                <span style={{ display: 'block', color: '#94A3B8', fontSize: 12.5, fontWeight: 500 }}>Solve 2 DSA problems and complete DBMS revision</span>
+              <div style={{ minWidth: 0 }}>
+                <span style={{ display: 'block', color: 'var(--text-dark, #1E293B)', fontSize: 13.5, fontWeight: 700 }}>Today's Goal</span>
+                <span style={{ display: 'block', color: 'var(--text-muted, #94A3B8)', fontSize: 12.5, fontWeight: 500 }}>
+                  {productivity.nextScheduledSession || 'Solve 2 DSA problems and complete DBMS revision'}
+                </span>
               </div>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginLeft: 'auto' }}>
-              <span style={{ fontSize: 12.5, fontWeight: 700, color: '#94A3B8', whiteSpace: 'nowrap' }}>1 / 2 completed</span>
-              <div style={{ width: 140, background: '#F1F5F9', borderRadius: 99, height: 8, overflow: 'hidden', position: 'relative' }}>
-                <div style={{ background: '#7C3AED', height: '100%', width: '50%', borderRadius: 99 }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16, width: isMobile ? '100%' : 'auto', justifyContent: isMobile ? 'space-between' : 'flex-end' }}>
+              <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-muted, #94A3B8)', whiteSpace: 'nowrap' }}>
+                {productivity.completedTasks ?? 1} / {productivity.todayTasks ?? 2} completed
+              </span>
+              <div style={{ width: 140, background: 'var(--border, #F1F5F9)', borderRadius: 99, height: 8, overflow: 'hidden', position: 'relative' }}>
+                <div style={{ 
+                  background: '#7C3AED', 
+                  height: '100%', 
+                  width: `${(productivity.todayTasks ? Math.min(100, Math.round(((productivity.completedTasks ?? 1) / productivity.todayTasks) * 100)) : 50)}%`, 
+                  borderRadius: 99 
+                }} />
               </div>
             </div>
           </div>

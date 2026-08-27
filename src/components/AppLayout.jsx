@@ -1,6 +1,11 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate, Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { useTheme } from '../context/ThemeContext'
+
+import ZenScoreIcon from './common/ZenScoreIcon'
+import AICareerCopilot from './careers/copilot/AICareerCopilot'
+import GlobalSearchModal from './common/GlobalSearchModal'
 import {
   LayoutDashboard,
   BookOpen,
@@ -13,30 +18,39 @@ import {
   Search,
   Bell,
   ChevronDown,
-  Sparkles,
   Menu,
-  Flame
+  X,
+  Sun,
+  Moon,
+  User as UserIcon,
+  Settings,
+  LogOut,
+  CheckCheck,
+  ArrowRight
 } from 'lucide-react'
 
+
 const allPages = [
-  { label: 'Dashboard',    path: '/dashboard',   icon: '🏠' },
+  { label: 'Dashboard',    path: '/dashboard',    icon: '🏠' },
   { label: 'Academics',    path: '/academics',    icon: '🎓' },
   { label: 'Careers',      path: '/careers',      icon: '💼' },
   { label: 'Skills',       path: '/skills',       icon: '⚡' },
-  { label: 'Jobs',         path: '/jobs',         icon: '🏢' },
   { label: 'Courses',      path: '/courses',      icon: '📚' },
+  { label: 'Jobs',         path: '/jobs',         icon: '🏢' },
   { label: 'Productivity', path: '/productivity', icon: '⏱️' },
   { label: 'AI Tutor',     path: '/ai-tutor',     icon: '🤖' },
 ]
 
-const sampleNotifications = [
-  { id: 1, icon: '🎯', title: 'Goal Reminder',  desc: 'You have 2 DSA problems pending today',    time: '5m ago',  unread: true  },
-  { id: 2, icon: '📈', title: 'GPA Updated',    desc: 'Your CGPA has been recalculated to 8.4',   time: '1h ago',  unread: true  },
-  { id: 3, icon: '🤖', title: 'AI Tutor',       desc: 'New study plan is ready for review',       time: '3h ago',  unread: false },
-]
+import {
+  getGlobalNotifications,
+  getUnreadNotificationCount,
+  markNotificationAsRead,
+  markAllNotificationsAsRead
+} from '../services/api'
 
 export default function AppLayout({ children, title, searchVal, onSearchChange }) {
   const { user, logout } = useAuth()
+  const { isDark, toggleTheme } = useTheme()
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -44,573 +58,1072 @@ export default function AppLayout({ children, title, searchVal, onSearchChange }
   const [isTablet, setIsTablet] = useState(typeof window !== 'undefined' ? window.innerWidth >= 768 && window.innerWidth < 1024 : false)
   const [sidebarOpen, setSidebarOpen] = useState(typeof window !== 'undefined' ? window.innerWidth >= 1024 : true)
 
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('zenscore_sidebar_collapsed')
+      if (stored !== null) return stored === 'true'
+    }
+    return false
+  })
+  const [activeTooltip, setActiveTooltip] = useState(null)
+
   const [showDropdown,     setShowDropdown]     = useState(false)
   const [showNotifications,setShowNotifications]= useState(false)
   const [showProfileMenu,  setShowProfileMenu]  = useState(false)
-  const [localSearch,      setLocalSearch]      = useState('')
-  const searchQuery = searchVal !== undefined ? searchVal : localSearch
-  const setSearchQuery = onSearchChange !== undefined ? onSearchChange : setLocalSearch
-  const [showSearch,       setShowSearch]       = useState(false)
-  const [recentSearches,   setRecentSearches]   = useState(['React', 'Docker', 'DSA', 'SQL'])
-  const popularSuggestions = [
-    { label: 'Become a Full Stack Developer', path: '/courses' },
-    { label: 'Practice Data Structures (Daily Challenge)', path: '/courses' },
-    { label: 'Track productivity & streak goals', path: '/productivity' }
-  ]
+  const profileMenuRef = useRef(null)
 
-  // Monitor window resize
+  // Live Notification System State
+  const [notifications, setNotifications] = useState([])
+  const [unreadCount, setUnreadCount] = useState(0)
+  const [isLoadingNotifications, setIsLoadingNotifications] = useState(false)
+  const [notificationsError, setNotificationsError] = useState(null)
+  const notificationsRef = useRef(null)
+
+  // Real relative timestamp calculation
+  const formatRelativeTime = (dateInput) => {
+    if (!dateInput) return ''
+    const date = new Date(dateInput)
+    const now = new Date()
+    const diffMs = now - date
+    const diffSec = Math.floor(diffMs / 1000)
+    if (diffSec < 60) return 'Just now'
+    const diffMin = Math.floor(diffSec / 60)
+    if (diffMin < 60) return `${diffMin}m ago`
+    const diffHrs = Math.floor(diffMin / 60)
+    if (diffHrs < 24) return `${diffHrs}h ago`
+    const diffDays = Math.floor(diffHrs / 24)
+    if (diffDays === 1) return 'Yesterday'
+    if (diffDays < 7) return `${diffDays}d ago`
+    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+  }
+
+  // Fetch unread count
+  const fetchUnreadCount = useCallback(async () => {
+    if (!user) return
+    try {
+      const count = await getUnreadNotificationCount()
+      setUnreadCount(typeof count === 'number' ? count : 0)
+    } catch (_) {}
+  }, [user])
+
+  // Fetch notifications list
+  const fetchNotificationsList = useCallback(async () => {
+    if (!user) return
+    setIsLoadingNotifications(true)
+    setNotificationsError(null)
+    try {
+      const res = await getGlobalNotifications({ limit: 20 })
+      if (res?.success) {
+        setNotifications(res.notifications || [])
+        if (typeof res.unreadCount === 'number') {
+          setUnreadCount(res.unreadCount)
+        }
+      } else {
+        setNotificationsError('Unable to load')
+      }
+    } catch (err) {
+      setNotificationsError('Temporarily unavailable')
+    } finally {
+      setIsLoadingNotifications(false)
+    }
+  }, [user])
+
+  // Periodic unread count fetch (60s)
+  useEffect(() => {
+    fetchUnreadCount()
+    const interval = setInterval(fetchUnreadCount, 60000)
+    return () => clearInterval(interval)
+  }, [fetchUnreadCount])
+
+  // Fetch on drawer open
+  useEffect(() => {
+    if (showNotifications) {
+      fetchNotificationsList()
+    }
+  }, [showNotifications, fetchNotificationsList])
+
+  // Click outside to close notification dropdown & profile menu
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (notificationsRef.current && !notificationsRef.current.contains(e.target)) {
+        setShowNotifications(false)
+      }
+      if (profileMenuRef.current && !profileMenuRef.current.contains(e.target)) {
+        setShowProfileMenu(false)
+      }
+    }
+    if (showNotifications || showProfileMenu) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [showNotifications, showProfileMenu])
+
+  // Handle clicking a notification
+  const handleNotificationClick = async (n) => {
+    if (!n.isRead) {
+      setNotifications(prev => prev.map(item => item._id === n._id ? { ...item, isRead: true } : item))
+      setUnreadCount(prev => Math.max(0, prev - 1))
+      try {
+        await markNotificationAsRead(n._id)
+      } catch (_) {}
+    }
+    setShowNotifications(false)
+    if (n.route) {
+      navigate(n.route)
+    }
+  }
+
+  // Handle mark all read
+  const handleMarkAllRead = async () => {
+    setNotifications(prev => prev.map(item => ({ ...item, isRead: true })))
+    setUnreadCount(0)
+    try {
+      await markAllNotificationsAsRead()
+    } catch (_) {}
+  }
+
+
+  // Global Contextual Search Modal State
+  const [isSearchModalOpen, setIsSearchModalOpen] = useState(false)
+  const [searchModalQuery, setSearchModalQuery] = useState('')
+
+  // Global Keyboard Shortcut: ⌘K or Ctrl+K
+  useEffect(() => {
+    const handleGlobalKeyDown = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        setIsSearchModalOpen(prev => !prev)
+      }
+    }
+    window.addEventListener('keydown', handleGlobalKeyDown)
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown)
+  }, [])
+
+  // Handle Resize
   useEffect(() => {
     const handleResize = () => {
-      const mobile = window.innerWidth < 768
-      const tablet = window.innerWidth >= 768 && window.innerWidth < 1024
+      const w = window.innerWidth
+      const mobile = w < 768
+      const tablet = w >= 768 && w < 1024
       setIsMobile(mobile)
       setIsTablet(tablet)
-      if (mobile || tablet) {
-        setSidebarOpen(false)
-      } else {
-        setSidebarOpen(true)
-      }
+      if (w < 1024) setSidebarOpen(false)
+      else setSidebarOpen(true)
     }
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
-  // Auto-close sidebar on mobile/tablet route change
-  useEffect(() => {
-    if (isMobile || isTablet) {
-      setSidebarOpen(false)
+  const handleToggleSidebar = () => {
+    if (isMobile) {
+      setSidebarOpen(prev => !prev)
+    } else {
+      setIsCollapsed(prev => {
+        const next = !prev
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('zenscore_sidebar_collapsed', String(next))
+        }
+        return next
+      })
     }
-  }, [location.pathname, isMobile, isTablet])
+  }
 
-  // ESC key handler to close sidebar/modals
+  // Dynamic header title from pathname
+  const getHeaderTitle = () => {
+    if (title) return title
+    const p = location.pathname
+    if (p.startsWith('/dashboard')) return 'Dashboard'
+    if (p.startsWith('/academics')) return 'Academics'
+    if (p.startsWith('/careers'))   return 'Careers'
+    if (p.startsWith('/skills'))    return 'Skills'
+    if (p.startsWith('/jobs'))      return 'Jobs'
+    if (p.startsWith('/productivity')) return 'Productivity'
+    if (p.startsWith('/courses'))   return 'Courses'
+    if (p.startsWith('/ai-tutor'))   return 'AI Tutor'
+    if (p.startsWith('/profile'))   return 'Profile'
+    if (p.startsWith('/study-groups')) return 'Study Groups'
+    return 'ZenScore AI'
+  }
+
+  const activePageLabel = getHeaderTitle()
+
+  const navLinks = [
+    { to: '/dashboard',    Icon: LayoutDashboard, label: 'Dashboard'    },
+    { to: '/academics',    Icon: GraduationCap,   label: 'Academics'    },
+    { to: '/careers',      Icon: Briefcase,       label: 'Careers'      },
+    { to: '/skills',       Icon: Cpu,             label: 'Skills'       },
+    { to: '/courses',      Icon: BookOpen,        label: 'Courses'      },
+    { to: '/jobs',         Icon: Building2,       label: 'Jobs'         },
+    { to: '/productivity', Icon: Clock,           label: 'Productivity' },
+    { to: '/ai-tutor',     Icon: Bot,             label: 'AI Tutor'     },
+  ]
+
+  const userInitial = user?.displayName
+    ? user.displayName[0].toUpperCase()
+    : user?.email
+      ? user.email[0].toUpperCase()
+      : 'U'
+
+  const resolveUserAvatar = () => {
+    try {
+      if (typeof window === 'undefined') return null
+      const uid = user?.uid || user?.id || null
+      if (!uid) return user?.photoURL || null
+
+      const uidStored = localStorage.getItem(`zs_user_avatar_${uid}`)
+      if (uidStored) return uidStored
+
+      const personal = localStorage.getItem(`zs_personal_data_${uid}`)
+      if (personal) {
+        try {
+          const parsed = JSON.parse(personal)
+          if (parsed.photoUrl) return parsed.photoUrl
+        } catch {}
+      }
+
+      return user?.photoURL || null
+    } catch {
+      return user?.photoURL || null
+    }
+  }
+
+  const [avatarUrl, setAvatarUrl] = useState(() => resolveUserAvatar())
+
   useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape') {
-        if (isMobile || isTablet) setSidebarOpen(false)
-        setShowNotifications(false)
-        setShowProfileMenu(false)
-        setShowSearch(false)
+    const resolved = resolveUserAvatar()
+    if (resolved) {
+      setAvatarUrl(resolved)
+    } else if (user?.photoURL) {
+      setAvatarUrl(user.photoURL)
+    }
+  }, [user])
+
+  useEffect(() => {
+    const handleAvatarUpdate = (e) => {
+      if (e?.detail?.photoUrl) {
+        setAvatarUrl(e.detail.photoUrl)
+      } else {
+        const resolved = resolveUserAvatar()
+        if (resolved) setAvatarUrl(resolved)
       }
     }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isMobile, isTablet])
+    window.addEventListener('zenscore:avatar_updated', handleAvatarUpdate)
+    return () => window.removeEventListener('zenscore:avatar_updated', handleAvatarUpdate)
+  }, [user])
 
-  // Lock body scroll when mobile sidebar is open
-  useEffect(() => {
-    if (isMobile && sidebarOpen) {
-      document.body.style.overflow = 'hidden'
-    } else {
-      document.body.style.overflow = ''
-    }
-    return () => { document.body.style.overflow = '' }
-  }, [isMobile, sidebarOpen])
 
-  // Redirect if not logged in
-  useEffect(() => { if (!user) navigate('/') }, [user])
+  const currentSidebarWidth = isMobile ? (sidebarOpen ? 250 : 0) : (isCollapsed ? 72 : 250)
 
-  // Close dropdowns on outside click
-  useEffect(() => {
-    const handler = () => {
-      setShowNotifications(false)
-      setShowProfileMenu(false)
-      setShowSearch(false)
-    }
-    document.addEventListener('click', handler)
-    return () => document.removeEventListener('click', handler)
-  }, [])
-
-  const studentName  = user?.displayName || 'Student'
-  const userInitials = studentName.charAt(0).toUpperCase()
-
-  const currentPage = allPages.find(p => p.path === location.pathname)
-  const headerTitle = title || currentPage?.label || ''
-
-  const filteredPages = searchQuery.trim()
-    ? allPages.filter(p => p.label.toLowerCase().includes(searchQuery.toLowerCase()))
-    : allPages
-
-  const isMobileOrTablet = isMobile || isTablet
+  // Dark Theme Palette Tokens (Neutral Dark Charcoal)
+  const themeStyles = {
+    bgApp: isDark ? '#0B0B0E' : '#F8FAFC',
+    bgSidebar: isDark ? '#121216' : '#FFFFFF',
+    borderSidebar: isDark ? '#2A2A32' : '#E2E8F0',
+    bgHeader: isDark ? '#121216' : '#FFFFFF',
+    borderHeader: isDark ? '#2A2A32' : '#E2E8F0',
+    textPrimary: isDark ? '#F4F4F6' : '#0F172A',
+    textSecondary: isDark ? '#A1A1AA' : '#64748B',
+    navInactiveBg: 'transparent',
+    navInactiveText: isDark ? '#A1A1AA' : '#64748B',
+    navHoverBg: isDark ? '#18181D' : '#F8FAFC',
+    navHoverText: isDark ? '#F4F4F6' : '#1E293B',
+    cardBg: isDark ? '#18181D' : '#FFFFFF',
+    cardBorder: isDark ? '#2A2A32' : '#E2E8F0',
+    inputBg: isDark ? '#18181D' : '#F8FAFC',
+    inputBorder: isDark ? '#2A2A32' : '#E2E8F0',
+    dropdownBg: isDark ? '#18181D' : '#FFFFFF',
+    dropdownBorder: isDark ? '#2A2A32' : '#E2E8F0',
+    tooltipBg: isDark ? '#26262E' : '#0F172A',
+  }
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: '#F8FAFC', position: 'relative', width: '100%', overflowX: 'hidden' }}>
+    <div style={{ display: 'flex', height: '100vh', background: themeStyles.bgApp, color: themeStyles.textPrimary, fontFamily: 'DM Sans, sans-serif', overflow: 'hidden', transition: 'background-color 0.25s ease, color 0.25s ease' }}>
 
-      {/* ── BACKDROP OVERLAY FOR MOBILE/TABLET SIDEBAR ── */}
-      {isMobileOrTablet && sidebarOpen && (
+      {/* ── BACKDROP FOR MOBILE SIDEBAR ── */}
+      {isMobile && sidebarOpen && (
         <div
           onClick={() => setSidebarOpen(false)}
           style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(15, 23, 42, 0.45)',
-            backdropFilter: 'blur(4px)',
-            WebkitBackdropFilter: 'blur(4px)',
-            zIndex: 45,
+            background: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(3px)',
+            zIndex: 1050,
             transition: 'opacity 0.25s ease'
           }}
         />
       )}
 
-      {/* ── LEFT SIDEBAR ── */}
-      <aside className="app-layout-sidebar" style={{
-        width: 260,
-        background: '#fff',
-        borderRight: '1px solid #E2E8F0',
-        display: sidebarOpen ? 'flex' : 'none',
+      {/* ── SIDEBAR ── */}
+      <aside style={{
+        width: isMobile ? 270 : (isCollapsed ? 72 : 250),
+        minWidth: isMobile ? 270 : (isCollapsed ? 72 : 250),
+        maxWidth: isMobile ? '80vw' : (isCollapsed ? 72 : 250),
+        background: themeStyles.bgSidebar,
+        borderRight: `1px solid ${themeStyles.borderSidebar}`,
+        display: 'flex',
         flexDirection: 'column',
         justifyContent: 'space-between',
-        position: 'fixed',
+        padding: isMobile
+          ? '18px 16px'
+          : (isCollapsed ? '20px 10px 16px' : '20px 16px 16px'),
+        position: isMobile ? 'fixed' : 'relative',
         top: 0, bottom: 0, left: 0,
-        zIndex: 50,
-        padding: '20px 14px',
-        transition: 'all 0.25s ease-in-out',
-        overflowY: 'auto',
-        overflowX: 'hidden',
-        boxShadow: isMobileOrTablet ? '8px 0 32px rgba(15,23,42,0.15)' : 'none'
+        zIndex: isMobile ? 1100 : (isCollapsed ? 120 : 20),
+        transform: isMobile ? (sidebarOpen ? 'translateX(0)' : 'translateX(-100%)') : 'none',
+        transition: 'transform 0.28s cubic-bezier(0.33, 1, 0.68, 1), width 0.25s ease, background-color 0.25s ease',
+        boxShadow: isMobile && sidebarOpen ? '8px 0 36px rgba(0,0,0,0.35)' : 'none',
+        overflow: isCollapsed && !isMobile ? 'visible' : 'auto',
+        overflowX: isCollapsed && !isMobile ? 'visible' : 'hidden',
+        overflowY: isCollapsed && !isMobile ? 'visible' : 'auto'
       }}>
-
-        {/* TOP: Logo + Nav */}
         <div>
-          {/* Logo */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 6px 20px', borderBottom: '1px solid #F1F5F9', marginBottom: 8 }}>
-            <div style={{
-              width: 38, height: 38, borderRadius: 12,
-              background: 'linear-gradient(135deg, #6366F1, #7C3AED)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: '#fff', fontSize: 19, fontWeight: 900, flexShrink: 0,
-              boxShadow: '0 4px 10px rgba(99,102,241,0.2)'
-            }}>Z</div>
-            <div>
-              <span style={{ fontFamily: 'Sora, sans-serif', fontSize: 15.5, fontWeight: 800, color: '#1E293B', display: 'block', lineHeight: 1.2 }}>
-                ZenScore <span style={{ color: '#7C3AED' }}>AI</span>
-              </span>
-              <span style={{ fontSize: 9.5, color: '#94A3B8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.6px' }}>Student Ecosystem</span>
-            </div>
+          {/* LOGO & Mobile Close Button */}
+          <div style={{
+            padding: isCollapsed && !isMobile ? '0' : '0 6px',
+            marginBottom: 24,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+          }}>
+            <Link
+              to="/dashboard"
+              onClick={() => { if (isMobile) setSidebarOpen(false) }}
+              style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}
+            >
+              <ZenScoreIcon size={isCollapsed && !isMobile ? 34 : 36} />
+              {(!isCollapsed || isMobile) && (
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <span style={{ fontFamily: 'Sora, sans-serif', fontWeight: 800, fontSize: 17, background: 'linear-gradient(135deg, #6366F1 0%, #A78BFA 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', letterSpacing: '-0.3px', lineHeight: 1.1 }}>
+                    ZenScore AI
+                  </span>
+                  <span style={{ fontSize: 9.5, fontWeight: 700, color: themeStyles.textSecondary, letterSpacing: '0.6px', textTransform: 'uppercase', marginTop: 2 }}>
+                    Student Ecosystem
+                  </span>
+                </div>
+              )}
+            </Link>
+
+            {/* Close button inside mobile drawer */}
+            {isMobile && (
+              <button
+                onClick={() => setSidebarOpen(false)}
+                aria-label="Close navigation drawer"
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 8,
+                  border: `1px solid ${themeStyles.inputBorder}`,
+                  background: themeStyles.inputBg,
+                  color: themeStyles.textSecondary,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer'
+                }}
+              >
+                <X size={18} />
+              </button>
+            )}
           </div>
 
-          {/* Nav */}
-          <nav style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {[
-              { to: '/dashboard',    Icon: LayoutDashboard, label: 'Dashboard'   },
-              { to: '/courses',      Icon: BookOpen,        label: 'Courses'     },
-              { to: '/academics',    Icon: GraduationCap,   label: 'Academics'   },
-              { to: '/careers',      Icon: Briefcase,       label: 'Careers'     },
-              { to: '/skills',       Icon: Cpu,             label: 'Skills'      },
-              { to: '/jobs',         Icon: Building2,       label: 'Jobs'        },
-              { to: '/productivity', Icon: Clock,           label: 'Productivity'},
-              { to: '/ai-tutor',     Icon: Bot,             label: 'AI Tutor'    },
-            ].map(({ to, Icon, label }) => {
-              const isActive = location.pathname === to
+          {/* MAIN NAV LINKS */}
+          <nav style={{ display: 'flex', flexDirection: 'column', gap: 6, position: 'relative', overflow: 'visible' }}>
+            {navLinks.map(({ to, Icon, label }) => {
+              const isActive = location.pathname === to || (to !== '/dashboard' && location.pathname.startsWith(to))
+              const showText = !isCollapsed || isMobile
+              const isHovered = isCollapsed && activeTooltip === to
               return (
-                <Link
+                <div
                   key={to}
-                  to={to}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 11,
-                    padding: '10px 14px', borderRadius: 11,
-                    fontSize: 13.5,
-                    fontWeight: isActive ? 700 : 500,
-                    background: isActive ? '#4F46E5' : 'transparent',
-                    color: isActive ? '#fff' : '#64748B',
-                    textDecoration: 'none',
-                    transition: 'all 0.15s ease',
-                    boxShadow: isActive ? '0 4px 12px rgba(79,70,229,0.15)' : 'none',
-                  }}
-                  onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = '#F8FAFC'; e.currentTarget.style.color = '#1E293B' } }}
-                  onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#64748B' } }}
+                  style={{ position: 'relative', zIndex: isHovered ? 99999 : 1 }}
+                  onMouseEnter={() => isCollapsed && !isMobile && setActiveTooltip(to)}
+                  onMouseLeave={() => setActiveTooltip(null)}
                 >
-                  <Icon size={17} strokeWidth={isActive ? 2.5 : 2} />
-                  {label}
-                </Link>
+                  <Link
+                    to={to}
+                    onClick={() => { if (isMobile) setSidebarOpen(false) }}
+                    aria-label={label}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: isCollapsed && !isMobile ? 'center' : 'flex-start',
+                      gap: isCollapsed && !isMobile ? 0 : 11,
+                      padding: isCollapsed && !isMobile ? '10px 0' : '10px 14px',
+                      width: isCollapsed && !isMobile ? 48 : 'auto',
+                      height: isCollapsed && !isMobile ? 44 : 'auto',
+                      margin: isCollapsed && !isMobile ? '0 auto' : 0,
+                      borderRadius: 12,
+                      fontSize: 13.5,
+                      fontWeight: isActive ? 700 : 500,
+                      background: isActive ? 'linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)' : themeStyles.navInactiveBg,
+                      color: isActive ? '#ffffff' : themeStyles.navInactiveText,
+                      textDecoration: 'none',
+                      transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                      boxShadow: isActive ? '0 4px 14px rgba(79,70,229,0.35)' : 'none',
+                    }}
+                    onMouseEnter={e => {
+                      if (!isActive) {
+                        e.currentTarget.style.background = themeStyles.navHoverBg
+                        e.currentTarget.style.color = themeStyles.navHoverText
+                      }
+                    }}
+                    onMouseLeave={e => {
+                      if (!isActive) {
+                        e.currentTarget.style.background = themeStyles.navInactiveBg
+                        e.currentTarget.style.color = themeStyles.navInactiveText
+                      }
+                    }}
+                  >
+                    <Icon size={19} strokeWidth={isActive ? 2.5 : 2} />
+                    {showText && <span>{label}</span>}
+                  </Link>
+
+                  {/* FLOATING HOVER TOOLTIP IN COLLAPSED MODE */}
+                  {isHovered && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        left: 'calc(100% + 14px)',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        background: '#0F172A',
+                        color: '#FFFFFF',
+                        fontFamily: 'Sora, sans-serif',
+                        fontSize: 12,
+                        fontWeight: 700,
+                        padding: '7px 14px',
+                        borderRadius: 8,
+                        whiteSpace: 'nowrap',
+                        zIndex: 999999,
+                        pointerEvents: 'none',
+                        boxShadow: '0 8px 24px rgba(0,0,0,0.45), 0 2px 6px rgba(0,0,0,0.25)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        border: '1px solid rgba(255,255,255,0.18)'
+                      }}
+                    >
+                      <div
+                        style={{
+                          position: 'absolute',
+                          left: -6,
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          width: 0,
+                          height: 0,
+                          borderTop: '6px solid transparent',
+                          borderBottom: '6px solid transparent',
+                          borderRight: '6px solid #0F172A'
+                        }}
+                      />
+                      {label}
+                    </div>
+                  )}
+                </div>
               )
             })}
           </nav>
         </div>
 
-        {/* BOTTOM: Upgrade + Profile */}
+        {/* BOTTOM: Profile */}
         <div style={{ marginTop: 24 }}>
-          {/* Upgrade Card */}
-          <div style={{
-            background: 'linear-gradient(135deg, #EDE9FE 0%, #F3F0FF 100%)',
-            borderRadius: 16, padding: '16px 14px', marginBottom: 14,
-            textAlign: 'center', border: '1px solid #DDD6FE'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginBottom: 5 }}>
-              <Sparkles size={13} style={{ color: '#7C3AED' }} />
-              <span style={{ fontSize: 11.5, fontWeight: 800, color: '#7C3AED', textTransform: 'uppercase', letterSpacing: '0.4px' }}>Upgrade to Pro</span>
-            </div>
-            <p style={{ fontSize: 11, color: '#64748B', lineHeight: 1.55, margin: '0 0 12px' }}>
-              Unlock advanced analytics, AI insights and more.
-            </p>
-            <button style={{
-              width: '100%', height: 34, borderRadius: 10, border: 'none',
-              background: 'linear-gradient(135deg, #6366F1, #7C3AED)',
-              color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer',
-              boxShadow: '0 3px 10px rgba(99,102,241,0.3)', transition: 'opacity 0.15s'
-            }}
-              onMouseEnter={e => e.currentTarget.style.opacity = '0.88'}
-              onMouseLeave={e => e.currentTarget.style.opacity = '1'}
-            >Upgrade Now</button>
-          </div>
-
-          {/* Profile Card */}
-          <div style={{ borderTop: '1px solid #F1F5F9', paddingTop: 14, position: 'relative' }}>
+          {/* User Profile Bar */}
+          {!isCollapsed ? (
             <div
-              onClick={() => setShowDropdown(!showDropdown)}
               style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                cursor: 'pointer', background: '#F8FAFC', borderRadius: 14,
-                padding: '10px 12px', border: '1px solid #F1F5F9', transition: 'background 0.15s'
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '8px 10px',
+                borderRadius: 14,
+                background: isDark ? '#18181D' : '#F8FAFC',
+                border: `1px solid ${isDark ? '#2A2A32' : '#E2E8F0'}`,
+                transition: 'all 0.18s ease'
               }}
-              onMouseEnter={e => e.currentTarget.style.background = '#F1F5F9'}
-              onMouseLeave={e => e.currentTarget.style.background = '#F8FAFC'}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{
+              <div
+                onClick={() => { if (isMobile) setSidebarOpen(false); navigate('/profile'); }}
+                title="Go to Student Profile"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  flex: 1,
+                  minWidth: 0,
+                  cursor: 'pointer'
+                }}
+              >
+                <div style={{
                   width: 34, height: 34, borderRadius: '50%',
-                  background: 'linear-gradient(135deg, #EC4899, #F43F5E)',
-                  color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontWeight: 700, fontSize: 14, flexShrink: 0,
-                  boxShadow: '0 2px 8px rgba(236,72,153,0.2)'
-                }}>{userInitials}</span>
-                <div style={{ textAlign: 'left' }}>
-                  <span style={{ display: 'block', fontSize: 13, fontFamily: 'Sora, sans-serif', fontWeight: 700, color: '#1E293B', lineHeight: 1.2 }}>
-                    {studentName.split(' ')[0]}
-                  </span>
-                  <span style={{ display: 'block', fontSize: 10.5, color: '#94A3B8', fontWeight: 500 }}>View Profile</span>
+                  background: 'linear-gradient(135deg, #4F46E5, #7C3AED)',
+                  color: '#fff', fontSize: 14, fontWeight: 700,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  flexShrink: 0,
+                  overflow: 'hidden'
+                }}>
+                  {avatarUrl ? (
+                    <img src={avatarUrl} alt={user?.displayName || 'Student'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    userInitial
+                  )}
+                </div>
+                <div style={{ overflow: 'hidden', flex: 1 }}>
+                  <div style={{ fontSize: 12.5, fontWeight: 700, color: themeStyles.textPrimary, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {user?.displayName || 'Student'}
+                  </div>
+                  <div style={{ fontSize: 10.5, color: themeStyles.textSecondary, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {user?.email || 'student@zenscore.ai'}
+                  </div>
                 </div>
               </div>
-              <ChevronDown size={14} style={{
-                color: '#94A3B8',
-                transform: showDropdown ? 'rotate(180deg)' : 'rotate(0deg)',
-                transition: 'transform 0.2s'
-              }} />
-            </div>
 
-            {showDropdown && (
-              <div style={{
-                position: 'absolute', bottom: 58, left: 0, right: 0,
-                background: '#fff', border: '1px solid #E2E8F0',
-                borderRadius: 12, padding: 6,
-                boxShadow: '0 8px 24px rgba(0,0,0,0.1)', zIndex: 60
-              }}>
-                <button
-                  onClick={logout}
-                  style={{ width: '100%', height: 36, background: 'none', border: 'none', borderRadius: 8, color: '#EF4444', fontSize: 12.5, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, padding: '0 10px' }}
-                >
-                  🚪 Switch Account / Logout
-                </button>
+              {/* Interactive Quick Logout Button */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  if (isMobile) setSidebarOpen(false)
+                  logout()
+                }}
+                title="Logout"
+                aria-label="Logout"
+                style={{
+                  width: 30,
+                  height: 30,
+                  borderRadius: 8,
+                  border: 'none',
+                  background: 'transparent',
+                  color: '#EF4444',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  flexShrink: 0,
+                  transition: 'background 0.15s, transform 0.15s'
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.background = isDark ? '#311213' : '#FEE2E2'
+                  e.currentTarget.style.transform = 'scale(1.1)'
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.background = 'transparent'
+                  e.currentTarget.style.transform = 'scale(1)'
+                }}
+              >
+                <LogOut size={15} />
+              </button>
+            </div>
+          ) : (
+            <div
+              style={{ position: 'relative', display: 'flex', justifyContent: 'center', zIndex: activeTooltip === 'profile' ? 99999 : 1 }}
+              onMouseEnter={() => setActiveTooltip('profile')}
+              onMouseLeave={() => setActiveTooltip(null)}
+            >
+              <div
+                onClick={() => navigate('/profile')}
+                title="Profile & Settings"
+                style={{
+                  width: 38, height: 38, borderRadius: '50%',
+                  background: 'linear-gradient(135deg, #4F46E5, #7C3AED)',
+                  color: '#fff', fontSize: 14, fontWeight: 700,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 8px rgba(79,70,229,0.3)',
+                  overflow: 'hidden',
+                  flexShrink: 0
+                }}
+              >
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt={user?.displayName || 'Student'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  userInitial
+                )}
               </div>
-            )}
-          </div>
+              {activeTooltip === 'profile' && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    left: 'calc(100% + 14px)',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: '#0F172A',
+                    color: '#FFFFFF',
+                    fontFamily: 'Sora, sans-serif',
+                    padding: '8px 12px',
+                    borderRadius: 10,
+                    whiteSpace: 'nowrap',
+                    zIndex: 999999,
+                    pointerEvents: 'auto',
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.45), 0 2px 6px rgba(0,0,0,0.25)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 6,
+                    border: '1px solid rgba(255,255,255,0.18)'
+                  }}
+                >
+                  <div
+                    style={{
+                      position: 'absolute',
+                      left: -6,
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      width: 0,
+                      height: 0,
+                      borderTop: '6px solid transparent',
+                      borderBottom: '6px solid transparent',
+                      borderRight: '6px solid #0F172A'
+                    }}
+                  />
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: '#FFFFFF' }}>
+                      {user?.displayName || 'Student Profile'}
+                    </div>
+                    <div style={{ fontSize: 10, color: '#94A3B8' }}>
+                      {user?.email || 'student@zenscore.ai'}
+                    </div>
+                  </div>
+                  <div style={{ borderTop: '1px solid rgba(255,255,255,0.12)', paddingTop: 5, display: 'flex', gap: 10, alignItems: 'center' }}>
+                    <span
+                      onClick={() => navigate('/profile')}
+                      style={{ fontSize: 11, color: '#818CF8', fontWeight: 600, cursor: 'pointer' }}
+                    >
+                      Profile
+                    </span>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); logout(); }}
+                      style={{
+                        background: 'none', border: 'none', padding: 0,
+                        fontSize: 11, color: '#F87171', fontWeight: 700,
+                        cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4
+                      }}
+                    >
+                      <LogOut size={12} /> Logout
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </aside>
 
-      {/* ── MAIN AREA ── */}
-      <main className="app-layout-main" style={{
-        flex: 1,
-        paddingLeft: (!isMobileOrTablet && sidebarOpen) ? 260 : 0,
-        minHeight: '100vh',
-        display: 'flex',
-        flexDirection: 'column',
-        transition: 'padding-left 0.25s ease-in-out',
-        width: '100%',
-        minWidth: 0
-      }}>
+
+
+      {/* ── MAIN WRAPPER ── */}
+      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, height: '100vh', position: 'relative', background: themeStyles.bgApp, transition: 'background-color 0.25s ease' }}>
 
         {/* ── TOP HEADER ── */}
-        <header className="app-layout-header" style={{
-          height: isMobile ? 64 : 72, background: '#fff', borderBottom: '1px solid #E2E8F0',
-          padding: isMobile ? '0 14px' : '0 32px', display: 'flex', alignItems: 'center',
-          justifyContent: 'space-between',
-          position: 'sticky', top: 0, zIndex: 40,
-          gap: 12
+        <header style={{
+          height: isMobile ? 56 : 64, minHeight: isMobile ? 56 : 64,
+          background: themeStyles.bgHeader,
+          borderBottom: `1px solid ${themeStyles.borderHeader}`,
+          padding: isMobile ? '0 12px' : '0 24px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          gap: isMobile ? 8 : 16, zIndex: 10,
+          transition: 'background-color 0.25s ease, border-color 0.25s ease'
         }}>
-          {/* Left: Hamburger + Title */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 10 : 16 }}>
+          {/* LEFT: Sidebar Toggle + Title */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 8 : 14, minWidth: 0 }}>
             <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748B', display: 'flex', alignItems: 'center', padding: 4 }}
+              onClick={handleToggleSidebar}
+              aria-label="Toggle Navigation Menu"
+              style={{
+                background: themeStyles.inputBg,
+                border: `1px solid ${themeStyles.inputBorder}`,
+                borderRadius: 9, width: 34, height: 34,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer', color: themeStyles.textSecondary,
+                flexShrink: 0
+              }}
             >
-              <Menu size={20} strokeWidth={2.5} />
+              <Menu size={18} />
             </button>
-            {headerTitle && (
-              <h1 className="app-layout-header-title" style={{ fontFamily: 'Sora, sans-serif', fontSize: isMobile ? 17 : 24, fontWeight: 800, color: '#1E293B', margin: 0, letterSpacing: '-0.5px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {headerTitle}
-              </h1>
-            )}
+
+            <h1 style={{
+              fontFamily: 'Sora, sans-serif',
+              fontWeight: 800,
+              fontSize: isMobile ? 16 : 20,
+              color: themeStyles.textPrimary,
+              margin: 0,
+              letterSpacing: '-0.3px',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis'
+            }}>
+              {activePageLabel}
+            </h1>
           </div>
 
-          {/* Center: Search */}
-          <div style={{ position: 'relative', flex: '0 1 380px' }} onClick={e => e.stopPropagation()}>
-            <div style={{ position: 'relative' }}>
-              <input
-                type="text"
-                placeholder={headerTitle === "Courses" ? "Search courses, topics or skills..." : "Search anything..."}
-                value={searchQuery}
-                onFocus={() => setShowSearch(true)}
-                onChange={e => { setSearchQuery(e.target.value); setShowSearch(true) }}
-                style={{
-                  width: '100%', height: 42,
-                  padding: searchQuery ? '0 44px 0 44px' : '0 40px 0 44px',
-                  background: '#F1F5F9',
-                  border: showSearch ? '1.5px solid #4F46E5' : '1.5px solid transparent',
-                  borderRadius: 12, fontSize: 13.5, outline: 'none',
-                  fontWeight: 500, color: '#1E293B', transition: 'all 0.2s'
-                }}
-              />
-              <Search
-                size={15}
-                style={{
-                  color: showSearch ? '#4F46E5' : '#94A3B8',
-                  position: 'absolute',
-                  left: 16,
-                  top: 13,
-                  pointerEvents: 'none',
-                  transform: showSearch ? 'scale(1.1)' : 'scale(1)',
-                  transition: 'transform 0.2s, color 0.2s'
-                }}
-              />
-              {searchQuery ? (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  style={{
-                    position: 'absolute', right: 12, top: 10,
-                    width: 22, height: 22, borderRadius: '50%',
-                    background: '#E2E8F0', color: '#64748B',
-                    border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    cursor: 'pointer', fontSize: 11, fontWeight: 700
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.background = '#CBD5E1'}
-                  onMouseLeave={e => e.currentTarget.style.background = '#E2E8F0'}
-                >
-                  ✕
-                </button>
-              ) : (
-                <span style={{ position: 'absolute', right: 12, top: 11, padding: '2px 6px', fontSize: 9.5, fontWeight: 700, color: '#94A3B8', background: '#fff', border: '1px solid #E2E8F0', borderRadius: 4 }}>⌘ K</span>
-              )}
-            </div>
-
-            {showSearch && (
+          {/* CENTER: Quick Search / Contextual Global Search Modal Trigger (Desktop & Tablet only) */}
+          {!isMobile && (
+            <div
+              onClick={() => {
+                setSearchModalQuery(searchVal || '')
+                setIsSearchModalOpen(true)
+              }}
+              style={{
+                position: 'relative',
+                flex: '0 1 360px',
+                cursor: 'pointer'
+              }}
+            >
               <div style={{
-                position: 'absolute', top: 48, left: 0, right: 0,
-                background: '#fff', border: '1px solid #E2E8F0',
-                borderRadius: 16, boxShadow: '0 12px 36px rgba(0,0,0,0.12)',
-                zIndex: 100, overflow: 'hidden'
+                display: 'flex', alignItems: 'center', gap: 9,
+                background: themeStyles.inputBg,
+                border: `1px solid ${themeStyles.inputBorder}`,
+                borderRadius: 12, padding: '7px 14px',
+                fontSize: 13, color: themeStyles.textSecondary,
+                transition: 'border-color 0.15s ease'
               }}>
-                {searchQuery ? (
-                  <>
-                    <div style={{ padding: '10px 14px 6px', fontSize: 10.5, fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                      Results
-                    </div>
-                    {filteredPages.length === 0
-                      ? <div style={{ padding: '16px 14px', fontSize: 13, color: '#94A3B8', textAlign: 'center' }}>No results found</div>
-                      : filteredPages.map(p => (
-                        <div
-                          key={p.path}
-                          onClick={() => { navigate(p.path); setShowSearch(false); setSearchQuery('') }}
-                          style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', cursor: 'pointer', transition: 'background 0.15s' }}
-                          onMouseEnter={e => e.currentTarget.style.background = '#F8FAFC'}
-                          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                        >
-                          <span style={{ fontSize: 18 }}>{p.icon}</span>
-                          <span style={{ fontSize: 13.5, fontWeight: 600, color: '#1E293B' }}>{p.label}</span>
-                          <span style={{ marginLeft: 'auto', fontSize: 11, color: '#CBD5E1' }}>→</span>
-                        </div>
-                      ))
-                    }
-                  </>
-                ) : (
-                  <>
-                    {/* Recent Searches */}
-                    {recentSearches.length > 0 && (
-                      <div style={{ borderBottom: '1px solid #F1F5F9', paddingBottom: 6 }}>
-                        <div style={{ padding: '10px 14px 6px', fontSize: 10.5, fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                          Recent Searches
-                        </div>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, padding: '4px 14px 10px' }}>
-                          {recentSearches.map(term => (
-                            <span
-                              key={term}
-                              onClick={() => setSearchQuery(term)}
-                              style={{
-                                fontSize: 11.5, fontWeight: 600, color: '#4F46E5',
-                                background: '#EEF2FF', padding: '4px 10px', borderRadius: 8,
-                                cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4,
-                                transition: 'background 0.15s'
-                              }}
-                              onMouseEnter={e => e.currentTarget.style.background = '#E0E7FF'}
-                              onMouseLeave={e => e.currentTarget.style.background = '#EEF2FF'}
-                            >
-                              🔍 {term}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Popular Suggestions */}
-                    <div>
-                      <div style={{ padding: '10px 14px 6px', fontSize: 10.5, fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                        Popular Suggestions
-                      </div>
-                      {popularSuggestions.map((item, idx) => (
-                        <div
-                          key={idx}
-                          onClick={() => { navigate(item.path); setShowSearch(false) }}
-                          style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', cursor: 'pointer', transition: 'background 0.15s' }}
-                          onMouseEnter={e => e.currentTarget.style.background = '#F8FAFC'}
-                          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                        >
-                          <span style={{ fontSize: 14.5, color: '#7C3AED' }}>⚡</span>
-                          <span style={{ fontSize: 13, fontWeight: 600, color: '#334155' }}>{item.label}</span>
-                          <span style={{ marginLeft: 'auto', fontSize: 10.5, color: '#CBD5E1' }}>Navigate</span>
-                        </div>
-                      ))}
-                    </div>
-                  </>
-                )}
-
-                <div style={{ borderTop: '1px solid #F1F5F9', padding: '8px 14px', display: 'flex', gap: 8 }}>
-                  <span style={{ fontSize: 10.5, color: '#94A3B8' }}>Press</span>
-                  <kbd style={{ fontSize: 10, background: '#F1F5F9', border: '1px solid #E2E8F0', borderRadius: 4, padding: '1px 5px', color: '#64748B', fontFamily: 'monospace' }}>Enter</kbd>
-                  <span style={{ fontSize: 10.5, color: '#94A3B8' }}>to navigate</span>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Right actions: Streak + Bell + Avatar */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
-            {/* Streak Counter */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Flame size={20} style={{ color: '#EA580C' }} fill="#EA580C" />
-              <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1 }}>
-                <span style={{ fontSize: 14, fontWeight: 800, color: '#1E293B' }}>12</span>
-                <span style={{ fontSize: 10, fontWeight: 600, color: '#64748B' }}>Day Streak</span>
+                <Search size={15} style={{ color: themeStyles.textSecondary }} />
+                <span style={{
+                  flex: 1,
+                  fontSize: 13,
+                  color: searchVal ? themeStyles.textPrimary : themeStyles.textSecondary,
+                  userSelect: 'none',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis'
+                }}>
+                  {searchVal || 'Search anything...'}
+                </span>
+                <span style={{ fontSize: 10, fontWeight: 700, background: isDark ? '#334155' : '#E2E8F0', color: themeStyles.textSecondary, padding: '1px 5px', borderRadius: 4 }}>⌘K</span>
               </div>
             </div>
+          )}
 
-            {/* Bell */}
-            <div style={{ position: 'relative' }} onClick={e => e.stopPropagation()}>
-              <div
-                onClick={() => { setShowNotifications(!showNotifications); setShowProfileMenu(false) }}
+          {/* RIGHT: Search (Mobile) + Theme Toggle + Notifications + User Avatar */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 8 : 12, flexShrink: 0 }}>
+
+            {/* Mobile Search Button */}
+            {isMobile && (
+              <button
+                onClick={() => {
+                  setSearchModalQuery(searchVal || '')
+                  setIsSearchModalOpen(true)
+                }}
+                aria-label="Open Search"
                 style={{
-                  width: 40, height: 40, borderRadius: 12,
-                  background: showNotifications ? '#EEF2FF' : '#F8FAFC',
-                  border: '1.5px solid #E2E8F0',
+                  background: isDark ? '#18181D' : '#F8FAFC',
+                  border: `1px solid ${isDark ? '#2A2A32' : '#E2E8F0'}`,
+                  borderRadius: 10, width: 36, height: 36,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  cursor: 'pointer', position: 'relative', transition: 'all 0.15s'
+                  cursor: 'pointer', color: themeStyles.textSecondary
                 }}
               >
-                <Bell size={18} style={{ color: showNotifications ? '#6366F1' : '#64748B' }} />
-                <span style={{
-                  position: 'absolute', top: -3, right: -3,
-                  width: 16, height: 16, background: '#EF4444', color: '#fff',
-                  borderRadius: '50%', fontSize: 9, fontWeight: 700,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  border: '2px solid #fff'
-                }}>3</span>
-              </div>
+                <Search size={17} />
+              </button>
+            )}
 
+
+            {/* Global Light / Dark Theme Toggle Button */}
+            <button
+              onClick={toggleTheme}
+              aria-label={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
+              title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
+              style={{
+                background: isDark ? '#18181D' : '#F8FAFC',
+                border: `1px solid ${isDark ? '#2A2A32' : '#E2E8F0'}`,
+                borderRadius: 10,
+                width: 36,
+                height: 36,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                color: isDark ? '#F59E0B' : '#64748B',
+                transition: 'all 0.2s ease',
+                boxShadow: isDark ? '0 2px 8px rgba(0,0,0,0.3)' : 'none'
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.background = isDark ? '#2A2A32' : '#F1F5F9'
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.background = isDark ? '#18181D' : '#F8FAFC'
+              }}
+            >
+              {isDark ? (
+                <Sun size={18} strokeWidth={2.2} style={{ color: '#F59E0B' }} />
+              ) : (
+                <Moon size={18} strokeWidth={2.2} style={{ color: '#64748B' }} />
+              )}
+            </button>
+
+            {/* Live Notifications */}
+            <div ref={notificationsRef} style={{ position: 'relative' }}>
+              <button
+                onClick={() => setShowNotifications(prev => !prev)}
+                aria-label="Notifications"
+                title="Notifications"
+                style={{
+                  background: themeStyles.inputBg,
+                  border: `1px solid ${themeStyles.inputBorder}`,
+                  borderRadius: 10, width: 36, height: 36,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer', color: themeStyles.textSecondary, position: 'relative',
+                  transition: 'background 0.15s ease, border-color 0.15s ease'
+                }}
+              >
+                <Bell size={17} />
+                {unreadCount > 0 && (
+                  <span style={{
+                    position: 'absolute', top: -3, right: -3,
+                    minWidth: 16, height: 16, padding: '0 4px',
+                    borderRadius: 8, background: '#EF4444',
+                    color: '#FFFFFF', fontSize: 9.5, fontWeight: 800,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    border: `1.5px solid ${themeStyles.bgHeader}`,
+                    boxShadow: '0 2px 6px rgba(239, 68, 68, 0.4)'
+                  }}>
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
+              </button>
+
+              {/* Notification Drawer Dropdown */}
               {showNotifications && (
                 <div style={{
-                  position: 'absolute', top: 50, right: 0, width: 340,
-                  background: '#fff', border: '1px solid #E2E8F0',
-                  borderRadius: 18, boxShadow: '0 16px 48px rgba(0,0,0,0.12)',
-                  zIndex: 100, overflow: 'hidden'
+                  position: 'absolute', top: '115%', right: 0, width: 350,
+                  maxWidth: 'calc(100vw - 32px)',
+                  background: themeStyles.dropdownBg,
+                  border: `1px solid ${themeStyles.dropdownBorder}`,
+                  borderRadius: 16,
+                  boxShadow: '0 16px 40px rgba(0,0,0,0.35)', zIndex: 100, overflow: 'hidden',
+                  display: 'flex', flexDirection: 'column'
                 }}>
-                  <div style={{ padding: '16px 18px 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #F1F5F9' }}>
-                    <span style={{ fontSize: 14, fontWeight: 800, color: '#1E293B', fontFamily: 'Sora, sans-serif' }}>Notifications</span>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: '#6366F1', cursor: 'pointer' }}>Mark all read</span>
-                  </div>
-                  {sampleNotifications.map(n => (
-                    <div
-                      key={n.id}
-                      style={{
-                        display: 'flex', alignItems: 'flex-start', gap: 12,
-                        padding: '13px 18px',
-                        background: n.unread ? '#FAFBFF' : '#fff',
-                        borderBottom: '1px solid #F8FAFC', cursor: 'pointer', transition: 'background 0.15s'
-                      }}
-                      onMouseEnter={e => e.currentTarget.style.background = '#F1F5F9'}
-                      onMouseLeave={e => e.currentTarget.style.background = n.unread ? '#FAFBFF' : '#fff'}
-                    >
-                      <span style={{ fontSize: 22, flexShrink: 0 }}>{n.icon}</span>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyBetween: 'space-between', marginBottom: 2 }}>
-                          <span style={{ fontSize: 13, fontWeight: 700, color: '#1E293B' }}>{n.title}</span>
-                          {n.unread && <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#6366F1', flexShrink: 0 }} />}
-                        </div>
-                        <div style={{ fontSize: 12, color: '#64748B', marginBottom: 3 }}>{n.desc}</div>
-                        <div style={{ fontSize: 11, color: '#94A3B8', fontWeight: 500 }}>{n.time}</div>
-                      </div>
+                  {/* Top Header */}
+                  <div style={{
+                    padding: '12px 16px',
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    borderBottom: `1px solid ${themeStyles.dropdownBorder}`,
+                    background: isDark ? '#14141A' : '#FAFAFC'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ fontFamily: 'Sora, sans-serif', fontWeight: 800, fontSize: 13.5, color: themeStyles.textPrimary }}>Notifications</span>
+                      {unreadCount > 0 ? (
+                        <span style={{
+                          fontSize: 10.5, fontWeight: 700, padding: '2px 7px',
+                          borderRadius: 6, background: '#6366F120', color: '#6366F1'
+                        }}>
+                          {unreadCount} new
+                        </span>
+                      ) : (
+                        <span style={{
+                          fontSize: 10.5, fontWeight: 600, padding: '2px 7px',
+                          borderRadius: 6, background: isDark ? '#232238' : '#F1F5F9', color: themeStyles.textSecondary
+                        }}>
+                          Live
+                        </span>
+                      )}
                     </div>
-                  ))}
-                  <div style={{ padding: '12px 18px', textAlign: 'center' }}>
-                    <span style={{ fontSize: 12.5, fontWeight: 700, color: '#6366F1', cursor: 'pointer' }}>View all notifications →</span>
+                    {unreadCount > 0 ? (
+                      <button
+                        onClick={handleMarkAllRead}
+                        style={{
+                          background: 'none', border: 'none', padding: '4px 8px', borderRadius: 6,
+                          fontSize: 11.5, color: '#6366F1', fontWeight: 700,
+                          cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
+                          transition: 'background 0.15s'
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.background = isDark ? '#232238' : '#EEF0FF'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                      >
+                        <CheckCheck size={13} />
+                        Mark all read
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => { fetchNotificationsList(); fetchUnreadCount(); }}
+                        title="Refresh notifications"
+                        style={{
+                          background: 'none', border: 'none', padding: '2px 6px',
+                          fontSize: 11, color: themeStyles.textSecondary, fontWeight: 600,
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Refresh
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Notification List */}
+                  <div style={{ maxHeight: 360, overflowY: 'auto' }}>
+                    {isLoadingNotifications ? (
+                      <div style={{ padding: '28px 16px', textAlign: 'center', fontSize: 12.5, color: themeStyles.textSecondary }}>
+                        Loading notifications...
+                      </div>
+                    ) : notificationsError ? (
+                      <div style={{ padding: '28px 16px', textAlign: 'center', fontSize: 12.5, color: themeStyles.textSecondary }}>
+                        Notifications temporarily unavailable
+                      </div>
+                    ) : notifications.length === 0 ? (
+                      <div style={{ padding: '36px 20px', textAlign: 'center' }}>
+                        <div style={{ fontSize: 26, marginBottom: 6 }}>📭</div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: themeStyles.textPrimary, marginBottom: 4 }}>
+                          No new notifications
+                        </div>
+                        <div style={{ fontSize: 11.5, color: themeStyles.textSecondary, lineHeight: 1.4 }}>
+                          You're up to date! Real-time alerts for your academics, jobs, and courses will appear here.
+                        </div>
+                      </div>
+                    ) : (
+                      notifications.map(n => {
+                        const isUnread = !n.isRead
+                        return (
+                          <div
+                            key={n._id || n.id}
+                            onClick={() => handleNotificationClick(n)}
+                            style={{
+                              padding: '12px 16px',
+                              borderBottom: `1px solid ${themeStyles.dropdownBorder}`,
+                              display: 'flex', gap: 11,
+                              background: isUnread ? (isDark ? '#1C1A2E' : '#F4F5FF') : 'transparent',
+                              cursor: 'pointer',
+                              transition: 'background 0.15s ease'
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.background = isDark ? '#232238' : '#EEF0FF'}
+                            onMouseLeave={e => e.currentTarget.style.background = isUnread ? (isDark ? '#1C1A2E' : '#F4F5FF') : 'transparent'}
+                          >
+                            <span style={{ fontSize: 18, flexShrink: 0, marginTop: 2 }}>
+                              {n.icon || '🔔'}
+                            </span>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{
+                                fontSize: 12.5,
+                                fontWeight: isUnread ? 700 : 600,
+                                color: themeStyles.textPrimary,
+                                display: 'flex', alignItems: 'center', gap: 6
+                              }}>
+                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  {n.title}
+                                </span>
+                                {isUnread && (
+                                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#6366F1', flexShrink: 0 }} />
+                                )}
+                              </div>
+                              <div style={{
+                                fontSize: 11.5,
+                                color: themeStyles.textSecondary,
+                                marginTop: 2,
+                                lineHeight: 1.35,
+                                display: '-webkit-box',
+                                WebKitLineClamp: 2,
+                                WebKitBoxOrient: 'vertical',
+                                overflow: 'hidden'
+                              }}>
+                                {n.message || n.desc}
+                              </div>
+                              <div style={{ fontSize: 10, color: themeStyles.textSecondary, marginTop: 4, opacity: 0.85 }}>
+                                {formatRelativeTime(n.createdAt || n.time)}
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })
+                    )}
+                  </div>
+
+                  {/* Bottom Footer Actions Bar */}
+                  <div style={{
+                    padding: '10px 16px',
+                    borderTop: `1px solid ${themeStyles.dropdownBorder}`,
+                    background: isDark ? '#14141A' : '#FAFAFC',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between'
+                  }}>
+                    <span style={{ fontSize: 11, color: themeStyles.textSecondary, fontWeight: 600 }}>
+                      {unreadCount > 0 ? `${unreadCount} unread` : 'All caught up'}
+                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      {unreadCount > 0 && (
+                        <button
+                          onClick={handleMarkAllRead}
+                          style={{
+                            background: 'none', border: 'none', padding: 0,
+                            fontSize: 11.5, color: '#6366F1', fontWeight: 700,
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Mark all read
+                        </button>
+                      )}
+                      <button
+                        onClick={() => { setShowNotifications(false); navigate('/academics'); }}
+                        style={{
+                          background: 'none', border: 'none', padding: 0,
+                          fontSize: 11.5, color: '#6366F1', fontWeight: 700,
+                          cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3
+                        }}
+                      >
+                        View all <ArrowRight size={12} />
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}
+
             </div>
 
-            {/* Profile Avatar */}
-            <div style={{ position: 'relative' }} onClick={e => e.stopPropagation()}>
+
+            {/* User Profile Menu Dropdown */}
+            <div ref={profileMenuRef} style={{ position: 'relative' }}>
               <div
-                onClick={() => { setShowProfileMenu(!showProfileMenu); setShowNotifications(false) }}
-                style={{
-                  width: 38, height: 38, borderRadius: '50%',
-                  background: '#6366F1',
-                  color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontWeight: 700, fontSize: 15, cursor: 'pointer', flexShrink: 0,
-                  boxShadow: showProfileMenu ? '0 0 0 3px rgba(99,102,241,0.25)' : '0 2px 8px rgba(79,70,229,0.2)',
-                  transition: 'box-shadow 0.2s'
-                }}
-              >{userInitials}</div>
+                onClick={() => setShowProfileMenu(prev => !prev)}
+                style={{ display: 'flex', alignItems: 'center', gap: 7, cursor: 'pointer' }}
+              >
+                <div style={{
+                  width: 36, height: 36, borderRadius: '50%',
+                  background: 'linear-gradient(135deg, #4F46E5, #7C3AED)',
+                  color: '#fff', fontSize: 14, fontWeight: 800,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  boxShadow: '0 2px 8px rgba(79,70,229,0.3)',
+                  overflow: 'hidden',
+                  flexShrink: 0
+                }}>
+                  {avatarUrl ? (
+                    <img src={avatarUrl} alt={user?.displayName || 'Student'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    userInitial
+                  )}
+                </div>
+                <ChevronDown size={14} style={{ color: themeStyles.textSecondary, transition: 'transform 0.2s', transform: showProfileMenu ? 'rotate(180deg)' : 'none' }} />
+              </div>
 
               {showProfileMenu && (
                 <div style={{
-                  position: 'absolute', top: 50, right: 0, width: 220,
-                  background: '#fff', border: '1px solid #E2E8F0',
-                  borderRadius: 16, boxShadow: '0 16px 48px rgba(0,0,0,0.12)',
-                  zIndex: 100, overflow: 'hidden'
+                  position: 'absolute', top: '115%', right: 0, width: 220,
+                  background: themeStyles.dropdownBg,
+                  border: `1px solid ${themeStyles.dropdownBorder}`,
+                  borderRadius: 14,
+                  boxShadow: '0 16px 40px rgba(0,0,0,0.35)', zIndex: 100, overflow: 'hidden', padding: '6px 0'
                 }}>
-                  <div style={{ padding: '14px 16px', borderBottom: '1px solid #F1F5F9', display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <span style={{
-                      width: 36, height: 36, borderRadius: '50%',
-                      background: 'linear-gradient(135deg, #4F46E5, #7C3AED)',
-                      color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontWeight: 700, fontSize: 14, flexShrink: 0
-                    }}>{userInitials}</span>
-                    <div>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: '#1E293B', fontFamily: 'Sora, sans-serif' }}>{studentName}</div>
-                      <div style={{ fontSize: 11, color: '#94A3B8' }}>{user?.email}</div>
-                    </div>
+                  <div style={{ padding: '10px 16px 12px', borderBottom: `1px solid ${themeStyles.dropdownBorder}` }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: themeStyles.textPrimary }}>{user?.displayName || 'Student User'}</div>
+                    <div style={{ fontSize: 11, color: themeStyles.textSecondary, marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.email || 'student@zenscore.ai'}</div>
                   </div>
                   {[
-                    { icon: '🏠', label: 'Dashboard', action: () => navigate('/dashboard') },
-                    { icon: '👤', label: 'My Profile', action: () => navigate('/profile') },
-                    { icon: '⚙️', label: 'Settings',   action: () => navigate('/settings')  },
+                    { label: 'Student Profile',  path: '/profile', icon: <UserIcon size={16} style={{ color: '#6366F1' }} /> },
+                    { label: 'Account Settings', path: '/profile?tab=settings', icon: <Settings size={16} style={{ color: '#8B5CF6' }} /> },
                   ].map(item => (
                     <div
-                      key={item.label}
-                      onClick={() => { item.action(); setShowProfileMenu(false) }}
-                      style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', cursor: 'pointer', fontSize: 13.5, fontWeight: 500, color: '#334155', transition: 'background 0.15s' }}
-                      onMouseEnter={e => e.currentTarget.style.background = '#F8FAFC'}
+                      key={item.path}
+                      onClick={() => { navigate(item.path); setShowProfileMenu(false) }}
+                      style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '10px 16px', cursor: 'pointer', fontSize: 13, fontWeight: 500, color: themeStyles.textPrimary, transition: 'background 0.15s' }}
+                      onMouseEnter={e => e.currentTarget.style.background = themeStyles.navHoverBg}
                       onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                     >
-                      <span style={{ fontSize: 16 }}>{item.icon}</span>
-                      {item.label}
+                      <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{item.icon}</span>
+                      <span>{item.label}</span>
                     </div>
                   ))}
-                  <div style={{ borderTop: '1px solid #FEE2E2', margin: '4px 0' }} />
+                  <div style={{ borderTop: `1px solid ${themeStyles.dropdownBorder}`, margin: '4px 0' }} />
                   <div
                     onClick={() => { logout(); setShowProfileMenu(false) }}
-                    style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', cursor: 'pointer', fontSize: 13.5, fontWeight: 600, color: '#EF4444', transition: 'background 0.15s' }}
-                    onMouseEnter={e => e.currentTarget.style.background = '#FFF5F5'}
+                    style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '10px 16px', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#EF4444', transition: 'background 0.15s' }}
+                    onMouseEnter={e => e.currentTarget.style.background = isDark ? '#311213' : '#FFF5F5'}
                     onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                   >
-                    <span style={{ fontSize: 16 }}>🚪</span>
+                    <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}><LogOut size={16} style={{ color: '#EF4444' }} /></span>
                     Logout
                   </div>
                 </div>
@@ -625,7 +1138,18 @@ export default function AppLayout({ children, title, searchVal, onSearchChange }
           {children}
         </div>
 
+        {/* Global Careers Copilot (Phase 7 Persistent Assistant) */}
+        {location.pathname.startsWith('/careers') && <AICareerCopilot />}
+
+        {/* Global Contextual Search Modal */}
+        <GlobalSearchModal
+          isOpen={isSearchModalOpen}
+          onClose={() => setIsSearchModalOpen(false)}
+          initialQuery={searchModalQuery}
+        />
+
       </main>
     </div>
   )
 }
+

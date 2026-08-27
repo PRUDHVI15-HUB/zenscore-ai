@@ -3,8 +3,8 @@
 @tailwind utilities;
 
 :root {
-  --primary: #2563EB;
-  --primary-dark: #1D4ED8;
+  --primary: #4F46E5;
+  --primary-dark: #3730A3;
   --primary-light: #EFF6FF;
   --accent: #06B6D4;
   --accent2: #7C3AED;
@@ -12,13 +12,31 @@
   --text-mid: #334155;
   --text-muted: #64748B;
   --bg: #FFFFFF;
-  --bg-soft: #F8FAFF;
+  --bg-soft: #F8FAFC;
   --border: #E2E8F0;
   --shadow-sm: 0 1px 4px rgba(15,23,42,0.07);
   --shadow-md: 0 4px 16px rgba(15,23,42,0.10);
   --shadow-lg: 0 12px 40px rgba(15,23,42,0.13);
   --radius-btn: 14px;
   --radius-card: 20px;
+}
+
+[data-theme="dark"], html.dark {
+  --primary: #6366F1;
+  --primary-dark: #4F46E5;
+  --primary-light: rgba(99, 102, 241, 0.15);
+  --accent: #22D3EE;
+  --accent2: #A78BFA;
+  --text-dark: #F4F4F6;
+  --text-mid: #A1A1AA;
+  --text-muted: #71717A;
+  --bg: #0B0B0E;
+  --bg-soft: #18181D;
+  --border: #2A2A32;
+  --shadow-sm: 0 1px 4px rgba(0,0,0,0.5);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.6);
+  --shadow-lg: 0 12px 40px rgba(0,0,0,0.7);
+  color-scheme: dark;
 }
 
 * {
@@ -32,11 +50,17 @@ html, body {
   overflow-x: hidden;
   scroll-behavior: smooth;
   -webkit-text-size-adjust: 100%;
+  transition: background-color 0.25s ease, color 0.25s ease;
 }
 body {
   font-family: 'DM Sans', sans-serif;
   color: var(--text-dark);
   background: var(--bg);
+}
+
+html.dark body {
+  background-color: #0B0B0E !important;
+  color: #F4F4F6 !important;
 }
 
 img, video, canvas, svg {
@@ -83,16 +107,34 @@ button, input, textarea, select {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   BULLETPROOF MOBILE RESPONSIVE MEDIA QUERIES (PURE CSS)
+   BULLETPROOF MOBILE & TABLET RESPONSIVE MEDIA QUERIES
    ═══════════════════════════════════════════════════════════════ */
 
-/* Navigation Hiding on Mobile */
+/* Global container & section scaling */
+@media (max-width: 1024px) {
+  .container {
+    padding-inline: 20px !important;
+  }
+}
+
 @media (max-width: 768px) {
+  .container {
+    padding-inline: 16px !important;
+  }
+  section {
+    padding: 36px 0 !important;
+  }
   .desktop-nav-links {
     display: none !important;
   }
   .desktop-search-text {
     display: none !important;
+  }
+}
+
+@media (max-width: 380px) {
+  .container {
+    padding-inline: 12px !important;
   }
 }
 
@@ -138,35 +180,72 @@ button, input, textarea, select {
     top: 0 !important;
     bottom: 0 !important;
     left: 0 !important;
-    z-index: 50 !important;
-    box-shadow: 8px 0 32px rgba(15, 23, 42, 0.2) !important;
+    z-index: 1000 !important;
+    box-shadow: 8px 0 32px rgba(15, 23, 42, 0.25) !important;
   }
   .app-layout-header {
-    height: 60px !important;
-    padding: 0 14px !important;
+    height: 56px !important;
+    padding: 0 12px !important;
   }
   .app-layout-header-title {
-    font-size: 17px !important;
+    font-size: 16px !important;
   }
 }
 
 /* General Grid auto-wrapping */
 @media (max-width: 768px) {
-  .responsive-grid {
-    grid-template-columns: 1fr !important;
-    gap: 16px !important;
-  }
-  .responsive-grid-2 {
-    grid-template-columns: 1fr !important;
-    gap: 16px !important;
-  }
-  .responsive-grid-3 {
-    grid-template-columns: 1fr !important;
-    gap: 16px !important;
-  }
+  .responsive-grid,
+  .responsive-grid-2,
+  .responsive-grid-3,
   .responsive-grid-4 {
     grid-template-columns: 1fr !important;
     gap: 16px !important;
+  }
+}
+
+/* Modal Responsiveness Safeguards */
+.modal-overlay, [role="dialog"], .zenscore-modal {
+  max-width: 100vw;
+  box-sizing: border-box;
+}
+
+@media (max-width: 640px) {
+  .modal-card, .dialog-content {
+    width: calc(100vw - 24px) !important;
+    max-width: calc(100vw - 24px) !important;
+    margin: 12px !important;
+    padding: 16px !important;
+    border-radius: 16px !important;
+  }
+}
+
+/* Global button touch area */
+@media (max-width: 768px) {
+  button, a.button {
+    touch-action: manipulation;
+  }
+}
+
+/* Hub Nav Tabs Universal Responsive Stacking */
+@media (max-width: 768px) {
+  .skills-nav-tabs,
+  .courses-nav-tabs,
+  .careers-nav-tabs,
+  .academics-nav-tabs,
+  .jobs-nav-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .skills-nav-tabs,
+  .courses-nav-tabs,
+  .careers-nav-tabs,
+  .academics-nav-tabs,
+  .jobs-nav-tabs {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
   }
 }
 
@@ -1527,5 +1606,77 @@ button, input, textarea, select {
   .msg-action-link-btn {
     background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
   }
+}
+
+/* =========================================================
+   UNIVERSAL DARK MODE OVERRIDES & TOKEN ENFORCEMENT
+   Ensures all card surfaces, modals, tables, inputs and headings
+   adapt cleanly to the neutral charcoal theme scale.
+   ========================================================= */
+
+html.dark, [data-theme="dark"] {
+  color-scheme: dark;
+}
+
+html.dark body, [data-theme="dark"] body {
+  background-color: var(--bg) !important;
+  color: var(--text-dark) !important;
+}
+
+/* Card and Container background fallbacks */
+html.dark [style*="background: #FFFFFF"],
+html.dark [style*="background:#FFFFFF"],
+html.dark [style*="background: #fff"],
+html.dark [style*="background:#fff"],
+html.dark [style*="background: rgb(255, 255, 255)"],
+html.dark [style*="background-color: #FFFFFF"],
+html.dark [style*="background-color:#FFFFFF"],
+html.dark [style*="background-color: #fff"],
+html.dark [style*="background-color:#fff"],
+html.dark [style*="background-color: rgb(255, 255, 255)"] {
+  background-color: var(--bg-soft) !important;
+}
+
+/* Soft secondary surface fallbacks (e.g. #F8FAFC, #F1F5F9) */
+html.dark [style*="background: #F8FAFC"],
+html.dark [style*="background:#F8FAFC"],
+html.dark [style*="background: #F1F5F9"],
+html.dark [style*="background:#F1F5F9"],
+html.dark [style*="background: rgb(248, 250, 252)"],
+html.dark [style*="background: rgb(241, 245, 249)"] {
+  background-color: var(--bg) !important;
+}
+
+/* Hardcoded Dark Text Fallbacks (e.g. #0F172A, #1E293B, #000000) */
+html.dark [style*="color: #0F172A"],
+html.dark [style*="color:#0F172A"],
+html.dark [style*="color: #1E293B"],
+html.dark [style*="color:#1E293B"],
+html.dark [style*="color: #000000"],
+html.dark [style*="color:#000000"],
+html.dark [style*="color: rgb(15, 23, 42)"],
+html.dark [style*="color: rgb(30, 41, 59)"] {
+  color: var(--text-dark) !important;
+}
+
+/* Hardcoded Muted Slate Text Fallbacks (e.g. #64748B, #475569, #334155) */
+html.dark [style*="color: #64748B"],
+html.dark [style*="color:#64748B"],
+html.dark [style*="color: #475569"],
+html.dark [style*="color:#475569"],
+html.dark [style*="color: #334155"],
+html.dark [style*="color:#334155"],
+html.dark [style*="color: rgb(100, 116, 139)"],
+html.dark [style*="color: rgb(71, 85, 105)"],
+html.dark [style*="color: rgb(51, 65, 85)"] {
+  color: var(--text-mid) !important;
+}
+
+/* Border fallbacks */
+html.dark [style*="border: 1px solid #E2E8F0"],
+html.dark [style*="border:1px solid #E2E8F0"],
+html.dark [style*="border: 1px solid #F1F5F9"],
+html.dark [style*="border:1px solid #F1F5F9"] {
+  border-color: var(--border) !important;
 }
 

@@ -1,12 +1,15 @@
 import { useState, useEffect } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { sendEmailVerification } from 'firebase/auth'
 import Navbar from './Navbar'
 import Footer from './Footer'
+import { isOnboardingCompleted } from '../utils/onboardingUtils'
 
 export default function ProtectedRoute({ children }) {
-  const { user, reloadUser, logout, loading } = useAuth()
+  const location = useLocation()
+  const authState = useAuth() || {}
+  const { user, reloadUser = () => {}, logout = () => {}, loading = false } = authState
   const [resending, setResending] = useState(false)
   const [message, setMessage] = useState({ type: '', text: '' })
 
@@ -191,6 +194,16 @@ export default function ProtectedRoute({ children }) {
         <Footer />
       </>
     )
+  }
+
+  // First-time users must complete onboarding before accessing the rest of the application
+  if (location.pathname !== '/onboarding' && !isOnboardingCompleted(user, authState?.backendUser)) {
+    return <Navigate to="/onboarding" replace />
+  }
+
+  // If already onboarded, redirect away from /onboarding to /dashboard
+  if (location.pathname === '/onboarding' && isOnboardingCompleted(user, authState?.backendUser)) {
+    return <Navigate to="/dashboard" replace />
   }
 
   return children

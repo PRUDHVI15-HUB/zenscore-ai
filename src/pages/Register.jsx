@@ -1,11 +1,13 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
+import ZenScoreLogo from '../components/common/ZenScoreLogo'
+import { isOnboardingCompleted } from '../utils/onboardingUtils'
 
 export default function Register() {
-  const { loginWithGoogle, registerWithEmail } = useAuth()
+  const { user, loading: authLoading, loginWithGoogle, registerWithEmail } = useAuth()
   const navigate = useNavigate()
   const [form, setForm] = useState({ name: '', email: '', password: '', confirm: '' })
   const [error, setError] = useState('')
@@ -13,16 +15,34 @@ export default function Register() {
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
+  useEffect(() => {
+    if (!authLoading && user) {
+      // If user is already fully onboarded (e.g. Google sign-in of existing user), go to dashboard
+      // New email registrations are handled explicitly in handleSubmit — navigate('/onboarding')
+      // This effect only triggers for Google sign-ins caught by the auth state listener
+      // For email sign-up, we do NOT redirect here to avoid overriding the /onboarding navigation
+    }
+  }, [user, authLoading, navigate])
+
+
   const handleChange = (e) => setForm(p => ({ ...p, [e.target.name]: e.target.value }))
 
   const handleGoogleSignUp = async () => {
     setLoading(true)
     setError('')
     try {
-      await loginWithGoogle()
-      navigate('/dashboard')
+      const result = await loginWithGoogle()
+      const firebaseUser = result?.user
+      const backendUserData = result?.backendUser
+      if (isOnboardingCompleted(firebaseUser, backendUserData)) {
+        navigate('/dashboard')
+      } else {
+        navigate('/onboarding')
+      }
     } catch (err) {
-      setError('Google sign-up failed. Please try again.')
+      if (err?.code !== 'auth/popup-closed-by-user' && err?.code !== 'auth/cancelled-popup-request') {
+        setError(err?.message || 'Google sign-up failed. Please try again.')
+      }
     } finally {
       setLoading(false)
     }
@@ -76,15 +96,23 @@ export default function Register() {
     setLoading(true)
     try {
       await registerWithEmail(form.name, form.email, form.password)
-      navigate('/dashboard')
+      navigate('/onboarding')
     } catch (err) {
       console.error('Registration error:', err)
-      if (err.code === 'auth/email-already-in-use') {
+      if (err.code === 'auth/network-request-failed') {
+        setError('Network Error: Unable to reach Firebase authentication servers. Please check your internet connection or DNS/VPN settings and try again.')
+      } else if (err.code === 'auth/email-already-in-use') {
         setError('This email address is already registered. Please go to the Login page instead.')
       } else if (err.code === 'auth/invalid-email') {
         setError('Please enter a valid email address.')
+      } else if (err.code === 'auth/weak-password') {
+        setError('Password is too weak. Please use a stronger password with at least 6 characters.')
+      } else if (err.code === 'auth/too-many-requests') {
+        setError('Too many unsuccessful attempts. Please wait a moment and try again.')
+      } else if (err.code === 'auth/operation-not-allowed') {
+        setError('Email/password sign-in is not enabled in Firebase project settings.')
       } else {
-        setError('Failed to create account. Please try again.')
+        setError(err.message || 'Failed to create account. Please try again.')
       }
     } finally {
       setLoading(false)
@@ -124,14 +152,9 @@ export default function Register() {
 
           {/* Header */}
           <div style={{ textAlign: 'center', marginBottom: 32 }}>
-            <Link to="/" style={{
-              fontFamily: 'Sora, sans-serif', fontWeight: 700, fontSize: 20,
-              color: 'var(--primary)', textDecoration: 'none',
-              display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 20
-            }}>
-              <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--accent)', display: 'inline-block' }} />
-              ZenScore <span style={{ color: 'var(--accent2)' }}>AI</span>
-            </Link>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 20 }}>
+              <ZenScoreLogo size={42} to="/" />
+            </div>
             <h1 style={{
               fontFamily: 'Sora, sans-serif', fontSize: 24, fontWeight: 800,
               color: 'var(--text-dark)', marginBottom: 8, letterSpacing: '-0.5px'

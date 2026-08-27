@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import UploadZone from './ocr/UploadZone'
 import UploadProgress from './ocr/UploadProgress'
 import ConfidenceBadge from './ocr/ConfidenceBadge'
@@ -6,7 +6,7 @@ import WarningList from './ocr/WarningList'
 import SubjectPreviewTable from './ocr/SubjectPreviewTable'
 import { uploadTranscript, confirmImportSession, deleteImportSession } from '../../services/api'
 
-export default function TranscriptOCRModal({ isOpen, onClose, onImportComplete }) {
+export default function TranscriptOCRModal({ isOpen, onClose, onImportComplete, onSuccess }) {
   const [selectedFile, setSelectedFile] = useState(null)
   const [loading, setLoading] = useState(false)
   const [currentStage, setCurrentStage] = useState('Uploading')
@@ -37,6 +37,60 @@ export default function TranscriptOCRModal({ isOpen, onClose, onImportComplete }
       setError(null)
     }
   }, [isOpen])
+
+  // Dynamically compute summary whenever subjects change (reactive to manual edits)
+  const computedSummary = useMemo(() => {
+    if (!subjects || subjects.length === 0) return summary || {}
+
+    let totalCredits = 0
+    let earnedCredits = 0
+    let failedCredits = 0
+    let passedSubjects = 0
+    let failedSubjects = 0
+    let totalGradePoints = 0
+    let gpaCredits = 0
+
+    subjects.forEach(sub => {
+      const rawGradeStr = String(sub.rawGrade || '').trim().toUpperCase()
+      const isFailedGrade = rawGradeStr === 'F' || rawGradeStr === 'RA' || rawGradeStr === 'W' || rawGradeStr === 'AB'
+      const isFailedResult = sub.result === 'FAIL' || sub.result === 'F'
+      const isFailedPoints = sub.finalGrade !== null && sub.finalGrade !== undefined && sub.finalGrade < 4
+      const isFailed = isFailedResult || isFailedGrade || isFailedPoints
+
+      const credits = typeof sub.credits === 'number' && !isNaN(sub.credits) ? sub.credits : (parseInt(sub.credits, 10) || 0)
+      const gradePoint = typeof sub.finalGrade === 'number' && !isNaN(sub.finalGrade) ? sub.finalGrade : (parseFloat(sub.finalGrade) || 0)
+
+      totalCredits += credits
+
+      if (isFailed) {
+        failedCredits += credits
+        failedSubjects += 1
+      } else {
+        earnedCredits += credits
+        passedSubjects += 1
+      }
+
+      if (credits > 0) {
+        totalGradePoints += (gradePoint * credits)
+        gpaCredits += credits
+      }
+    })
+
+    const calculatedSGPA = gpaCredits > 0 ? parseFloat((totalGradePoints / gpaCredits).toFixed(2)) : (summary?.sgpa || 0)
+    const semesterStatus = failedSubjects > 0 ? 'Failed' : 'Completed'
+
+    return {
+      ...(summary || {}),
+      totalCredits,
+      earnedCredits,
+      failedCredits,
+      passedSubjects,
+      failedSubjects,
+      sgpa: !isNaN(calculatedSGPA) ? calculatedSGPA : (summary?.sgpa || 0),
+      cgpa: summary?.cgpa !== undefined ? summary.cgpa : (!isNaN(calculatedSGPA) ? calculatedSGPA : 0),
+      semesterStatus
+    }
+  }, [subjects, summary])
 
   if (!isOpen) return null
 
@@ -73,13 +127,13 @@ export default function TranscriptOCRModal({ isOpen, onClose, onImportComplete }
       setWarnings(payload.warnings || [])
       setSubjects(payload.subjects || [])
       setSummary(payload.summary || null)
-      setSemesterLabel(payload.semesterLabel || (payload.semesterNumber ? `IV` : 'IV'))
+      setSemesterLabel(payload.semesterLabel || (payload.semesterNumber ? `${payload.semesterNumber}` : 'I'))
       setMetadata(payload.metadata || {})
       setRepairedFields(payload.metadata?.repairedFields || [])
       setLoading(false)
     } catch (err) {
       clearInterval(progressTimer)
-      setError(err.message || 'An error occurred during transcript processing.')
+      setError(err.message || 'An error occurred during memo processing.')
       setLoading(false)
     }
   }
@@ -87,14 +141,26 @@ export default function TranscriptOCRModal({ isOpen, onClose, onImportComplete }
   // Handle subject change from SubjectPreviewTable editable cells
   const handleSubjectChange = (id, field, value) => {
     setSubjects(prev =>
-      prev.map(s => {
-        if (s.id === id) {
+      prev.map((s, idx) => {
+        const sId = s.id || s._id || idx
+        if (sId === id || s.id === id || idx === id) {
           const updated = { ...s, [field]: value }
           if (field === 'credits') {
-            updated.credits = value === null || value === '' ? null : parseInt(value, 10)
+            updated.credits = value === null || value === '' ? null : parseFloat(value)
           }
           if (field === 'finalGrade') {
             updated.finalGrade = value === null || value === '' ? null : parseFloat(value)
+            if (updated.finalGrade !== null && !isNaN(updated.finalGrade) && updated.finalGrade >= 4) {
+              if (updated.result === 'FAIL' || updated.result === 'F') updated.result = 'PASS'
+            }
+          }
+          if (field === 'rawGrade') {
+            const upper = String(value || '').trim().toUpperCase()
+            const gradeMap = { 'O': 10, 'S': 10, 'A+': 9, 'A': 8, 'B+': 7, 'B': 6, 'C': 5, 'P': 4, 'F': 0 }
+            if (gradeMap[upper] !== undefined) {
+              updated.finalGrade = gradeMap[upper]
+              updated.result = upper === 'F' ? 'FAIL' : 'PASS'
+            }
           }
           return updated
         }
@@ -136,30 +202,69 @@ export default function TranscriptOCRModal({ isOpen, onClose, onImportComplete }
     if (!sessionId) return
     setLoading(true)
     try {
-      await confirmImportSession(sessionId)
+      const romanMap = {
+        'I': 1, 'II': 2, 'III': 3, 'IV': 4, 'V': 5, 'VI': 6, 'VII': 7, 'VIII': 8,
+        '1': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8,
+        'I-I': 1, 'I-II': 2, 'II-I': 3, 'II-II': 4, 'III-I': 5, 'III-II': 6, 'IV-I': 7, 'IV-II': 8
+      }
+      const rawSem = metadata?.semesterNumber || semesterLabel
+      const semNum = romanMap[String(rawSem).trim().toUpperCase()] || parseInt(rawSem, 10) || 1
+
+      await confirmImportSession(sessionId, {
+        subjects,
+        semesterNumber: semNum,
+        summary: computedSummary
+      })
       setLoading(false)
       if (onImportComplete) {
         onImportComplete()
       }
+      if (onSuccess) {
+        onSuccess()
+      }
       onClose()
     } catch (err) {
-      setError(err.message || 'Failed to finalize import session.')
+      setError(err.message || 'Failed to finalize memo marks.')
       setLoading(false)
     }
   }
 
+  if (!isOpen) return null
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
-      <div className="relative w-full max-w-4xl bg-white dark:bg-slate-900 rounded-3xl shadow-xl flex flex-col max-h-[90vh] border border-slate-150 dark:border-slate-800 overflow-hidden">
+    <div style={{
+      position: 'fixed',
+      inset: 0,
+      zIndex: 99999,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      background: 'rgba(15, 23, 42, 0.65)',
+      backdropFilter: 'blur(6px)',
+      padding: 20
+    }}>
+      <div style={{
+        position: 'relative',
+        width: '100%',
+        maxWidth: 720,
+        maxHeight: '90vh',
+        background: '#0F172A',
+        borderRadius: 24,
+        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+        border: '1px solid #1E293B',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden'
+      }}>
         
         {/* Header */}
         <div className="px-6 py-4 border-b border-slate-150 dark:border-slate-800 flex items-center justify-between">
           <div className="flex flex-col">
             <h3 className="text-lg font-bold text-slate-850 dark:text-slate-100 flex items-center gap-2">
-              Import Transcript via AI OCR
+              Upload Memo via AI OCR
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Upload transcript to automatically populate course academic marks
+              Upload your semester memo to automatically extract your marks and course grades
             </p>
           </div>
           <button
@@ -197,7 +302,7 @@ export default function TranscriptOCRModal({ isOpen, onClose, onImportComplete }
               <div className="flex items-center gap-3">
                 <div className="w-6 h-6 border-3 border-blue-500 border-t-transparent rounded-full animate-spin" />
                 <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">
-                  Processing Transcript...
+                  Extracting marks from Memo...
                 </span>
               </div>
               <UploadProgress currentStage={currentStage} />
@@ -251,7 +356,7 @@ export default function TranscriptOCRModal({ isOpen, onClose, onImportComplete }
               ) : (
                 <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
                   <span>✓</span>
-                  <span>No warnings. No validation errors. All transcript data verified cleanly.</span>
+                  <span>No warnings. No validation errors. All memo marks verified cleanly.</span>
                 </div>
               )}
 
@@ -282,49 +387,60 @@ export default function TranscriptOCRModal({ isOpen, onClose, onImportComplete }
                   <div className="p-3 rounded-xl bg-white dark:bg-slate-950 border border-slate-150 dark:border-slate-800 flex flex-col gap-0.5">
                     <span className="text-[10px] font-semibold uppercase text-slate-400 dark:text-slate-500">Semester</span>
                     <span className="text-sm font-extrabold text-slate-900 dark:text-slate-100">
-                      {semesterLabel || 'IV'}
+                      {semesterLabel || metadata?.semesterNumber || '—'}
                     </span>
                   </div>
 
                   <div className="p-3 rounded-xl bg-white dark:bg-slate-950 border border-slate-150 dark:border-slate-800 flex flex-col gap-0.5">
                     <span className="text-[10px] font-semibold uppercase text-slate-400 dark:text-slate-500">Credits Earned</span>
                     <span className="text-sm font-extrabold text-emerald-600 dark:text-emerald-400">
-                      {summary?.earnedCredits ?? 20}
+                      {computedSummary?.earnedCredits !== null && computedSummary?.earnedCredits !== undefined ? computedSummary.earnedCredits : '—'}
                     </span>
                   </div>
 
                   <div className="p-3 rounded-xl bg-white dark:bg-slate-950 border border-slate-150 dark:border-slate-800 flex flex-col gap-0.5">
                     <span className="text-[10px] font-semibold uppercase text-slate-400 dark:text-slate-500">Subjects</span>
                     <span className="text-sm font-extrabold text-slate-900 dark:text-slate-100">
-                      {subjects.length || 10}
+                      {subjects.length > 0 ? subjects.length : '—'}
                     </span>
                   </div>
 
                   <div className="p-3 rounded-xl bg-white dark:bg-slate-950 border border-slate-150 dark:border-slate-800 flex flex-col gap-0.5">
                     <span className="text-[10px] font-semibold uppercase text-slate-400 dark:text-slate-500">SGPA</span>
                     <span className="text-sm font-extrabold text-indigo-600 dark:text-indigo-400">
-                      {summary?.sgpa !== null && summary?.sgpa !== undefined ? Number(summary.sgpa).toFixed(2) : '9.40'}
+                      {computedSummary?.sgpa !== null && computedSummary?.sgpa !== undefined ? Number(computedSummary.sgpa).toFixed(2) : '—'}
                     </span>
                   </div>
 
                   <div className="p-3 rounded-xl bg-white dark:bg-slate-950 border border-slate-150 dark:border-slate-800 flex flex-col gap-0.5">
                     <span className="text-[10px] font-semibold uppercase text-slate-400 dark:text-slate-500">CGPA</span>
                     <span className="text-sm font-extrabold text-purple-600 dark:text-purple-400">
-                      {summary?.cgpa !== null && summary?.cgpa !== undefined ? Number(summary.cgpa).toFixed(2) : '8.51'}
+                      {computedSummary?.cgpa !== null && computedSummary?.cgpa !== undefined ? Number(computedSummary.cgpa).toFixed(2) : '—'}
                     </span>
                   </div>
 
                   <div className="p-3 rounded-xl bg-white dark:bg-slate-950 border border-slate-150 dark:border-slate-800 flex flex-col gap-0.5">
                     <span className="text-[10px] font-semibold uppercase text-slate-400 dark:text-slate-500">Status</span>
-                    <span className="text-sm font-extrabold text-emerald-600 dark:text-emerald-400">
-                      {summary?.semesterStatus || 'Completed'}
+                    <span
+                      className="text-sm font-extrabold"
+                      style={{
+                        color: computedSummary?.semesterStatus
+                          ? /fail|detained|back|arrear|not\s*clear/i.test(computedSummary.semesterStatus)
+                            ? '#DC2626'
+                            : /pass|clear|complete/i.test(computedSummary.semesterStatus)
+                              ? '#059669'
+                              : '#64748B'
+                          : '#64748B'
+                      }}
+                    >
+                      {computedSummary?.semesterStatus || '—'}
                     </span>
                   </div>
 
                   <div className="p-3 rounded-xl bg-white dark:bg-slate-950 border border-slate-150 dark:border-slate-800 flex flex-col gap-0.5">
                     <span className="text-[10px] font-semibold uppercase text-slate-400 dark:text-slate-500">Confidence</span>
-                    <span className="text-sm font-extrabold text-emerald-600 dark:text-emerald-400">
-                      {confidence || 97}%
+                    <span className={`text-sm font-extrabold ${confidence >= 90 ? 'text-emerald-600 dark:text-emerald-400' : confidence >= 70 ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-600 dark:text-red-400'}`}>
+                      {confidence ? `${confidence}%` : '—'}
                     </span>
                   </div>
                 </div>
@@ -352,7 +468,7 @@ export default function TranscriptOCRModal({ isOpen, onClose, onImportComplete }
               onClick={handleConfirm}
               disabled={loading || warnings.some(w => w.severity === 'ERROR')}
             >
-              Confirm Import
+              Confirm &amp; Save Marks
             </button>
           )}
         </div>
