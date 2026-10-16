@@ -492,7 +492,8 @@ export default function ResumeCenter({ selectedRole, onSelectCareerRole }) {
       )}
 
       {/* ── SECTION 2: RESUME SUMMARY (4 STAT CARDS) ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
+      <div id="resume-ats-cards" data-testid="resume-ats-cards" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
+
         {/* Card 1: Resume Status */}
         <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: 20, padding: 20, boxShadow: '0 4px 20px rgba(15,23,42,0.03)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>

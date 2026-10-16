@@ -37,7 +37,7 @@ export const apiFetch = async (endpoint, options = {}) => {
     : (endpoint.startsWith('/') ? endpoint : `/${endpoint}`)
 
   // Guard private endpoints against unauthenticated network requests
-  const isPrivateEndpoint = /^\/(student|careers|applications|ocr|academics|auth\/me|search|notifications)/i.test(cleanEndpoint)
+  const isPrivateEndpoint = /^\/(student|careers|applications|ocr|academics|auth\/me|search|notifications|feedback)/i.test(cleanEndpoint)
   if (!token && isPrivateEndpoint && !options.allowUnauthenticated) {
     const error = new Error('Authentication required')
     error.status = 401
@@ -337,4 +337,17 @@ export {
   markAllNotificationsAsRead,
   deleteNotification as deleteGlobalNotification
 } from './notifications/notificationService'
+
+// ── STUDENT STUDY FEEDBACK ──
+export const getFeedbackStatus = async (round) => {
+  return await apiFetch(`/feedback/status${round ? `?round=${round}` : ''}`, { method: 'GET' })
+}
+
+export const submitFeedback = async (data) => {
+  return await apiFetch('/feedback', {
+    method: 'POST',
+    body: JSON.stringify(data)
+  })
+}
+
 

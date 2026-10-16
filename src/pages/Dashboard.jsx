@@ -173,7 +173,8 @@ export default function Dashboard() {
           </div>
 
           {/* Metrics Grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: isMobile ? 16 : 24 }}>
+          <div id="dashboard-summary-cards" data-testid="dashboard-summary-cards" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: isMobile ? 16 : 24 }}>
+
             {(() => {
               const hasSemesters = (academics?.semesters?.length > 0) || (academic?.completedSemesters > 0)
               const currentCGPAValue = academics?.cgpa ?? academic?.currentCGPA ?? null

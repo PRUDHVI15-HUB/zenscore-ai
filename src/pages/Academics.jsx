@@ -333,7 +333,8 @@ export default function Academics() {
                 description="Live CGPA standings, target goals, forecast predictions, and total logged credit units."
               />
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: 20 }}>
+              <div id="academic-snapshot-cards" data-testid="academic-snapshot-cards" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: 20 }}>
+
                 {/* 1. Current CGPA */}
                 <div style={{
                   background: 'var(--bg-soft, #FFFFFF)',

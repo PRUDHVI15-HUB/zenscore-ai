@@ -40,6 +40,7 @@ const CourseDetail = lazy(() => import('./pages/courses/CourseDetail'))
 const AITutor = lazy(() => import('./pages/AITutor'))
 const Profile = lazy(() => import('./pages/Profile'))
 const StudyGroups = lazy(() => import('./pages/StudyGroups'))
+const FeedbackPage = lazy(() => import('./pages/Feedback'))
 const NotFound = lazy(() => import('./pages/NotFound'))
 
 const PageLoader = () => (
@@ -114,6 +115,7 @@ export default function App() {
               <Route path="/courses/:courseId" element={<ProtectedRoute><CourseDetail /></ProtectedRoute>} />
               <Route path="/ai-tutor" element={<ProtectedRoute><AITutor /></ProtectedRoute>} />
               <Route path="/study-groups" element={<ProtectedRoute><StudyGroups /></ProtectedRoute>} />
+              <Route path="/feedback" element={<ProtectedRoute><FeedbackPage /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>

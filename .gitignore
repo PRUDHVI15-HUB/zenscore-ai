@@ -12,3 +12,4 @@ serviceAccountKey.json
 .vscode
 .vscode/
 Thumbs.db
+vite.config.js.timestamp*

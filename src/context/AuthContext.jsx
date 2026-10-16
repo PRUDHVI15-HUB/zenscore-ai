@@ -16,15 +16,38 @@ import { resetProfile } from '../services/studentProfileService'
 const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null)
-  const [backendUser, setBackendUser] = useState(null)
-  const [loading, setLoading] = useState(true) // Used only for initial session validation
+  const [user, setUser] = useState(() => {
+    try {
+      const raw = localStorage.getItem('zenscore_demo_user')
+      return raw ? JSON.parse(raw) : null
+    } catch {
+      return null
+    }
+  })
+  const [backendUser, setBackendUser] = useState(() => {
+    try {
+      const raw = localStorage.getItem('zenscore_demo_user')
+      if (!raw) return null
+      const parsed = JSON.parse(raw)
+      return parsed.backendUser || parsed
+    } catch {
+      return null
+    }
+  })
+  const [loading, setLoading] = useState(() => {
+    try {
+      return !localStorage.getItem('zenscore_demo_user')
+    } catch {
+      return true
+    }
+  })
   const [isProcessing, setIsProcessing] = useState(false)
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         setUser(firebaseUser)
+
         if (!isProcessing) {
           try {
             const idToken = await firebaseUser.getIdToken()
@@ -35,6 +58,19 @@ export function AuthProvider({ children }) {
           }
         }
       } else {
+        // If demo user is present in localStorage, retain demo session
+        try {
+          const demoUserRaw = localStorage.getItem('zenscore_demo_user')
+          const demoToken = localStorage.getItem('zenscore_jwt')
+          if (demoUserRaw && demoToken) {
+            const parsedDemo = JSON.parse(demoUserRaw)
+            setUser(parsedDemo)
+            setBackendUser(parsedDemo.backendUser || parsedDemo)
+            setLoading(false)
+            return
+          }
+        } catch (_) {}
+
         // User is fully logged out — clear state completely
         setUser(null)
         setBackendUser(null)
@@ -43,6 +79,7 @@ export function AuthProvider({ children }) {
     })
     return unsub
   }, [isProcessing])
+
 
   // Single fire-and-forget sync to Unified Student Profile basicProfile section
   useEffect(() => {

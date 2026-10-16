@@ -427,9 +427,12 @@ export default function JobsHero({
 
       {/* 4 HERO QUICK STATISTICS CARDS */}
       <motion.div
+        id="jobs-summary-cards"
+        data-testid="jobs-summary-cards"
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.2 }}
+
         style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',

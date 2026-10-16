@@ -223,29 +223,77 @@ export default function AcademicAnalytics({ analyticsData: propData }) {
           border: '1px solid var(--border, #E2E8F0)',
           boxShadow: '0 4px 20px rgba(15,23,42,0.03)',
           display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between'
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+          gap: 12
         }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted, #64748B)', fontFamily: 'Sora, sans-serif' }}>Predicted CGPA</span>
-            <span style={{ fontFamily: 'Sora, sans-serif', fontSize: 28, fontWeight: 800, color: '#7C3AED' }}>
-              {prediction?.isAvailable ? Number(prediction.predictedCGPA).toFixed(2) : '\u2014'}
-            </span>
-            <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--text-muted, #94A3B8)' }}>{prediction?.isAvailable ? (prediction.confidenceLabel + ' confidence') : 'Add records to forecast'}</span>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted, #64748B)', fontFamily: 'Sora, sans-serif' }}>Predicted CGPA</span>
+              <span style={{ fontFamily: 'Sora, sans-serif', fontSize: 28, fontWeight: 800, color: '#7C3AED' }}>
+                {prediction?.isAvailable ? Number(prediction.predictedCGPA).toFixed(2) : '\u2014'}
+              </span>
+              <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--text-muted, #94A3B8)' }}>
+                {prediction?.isAvailable ? `${prediction.confidenceLabel} confidence` : 'Add records to forecast'}
+              </span>
+            </div>
+            <div style={{
+              width: 44,
+              height: 44,
+              borderRadius: 14,
+              background: 'rgba(124, 58, 237, 0.12)',
+              color: '#7C3AED',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0
+            }}>
+              <Sparkles size={22} strokeWidth={2.2} />
+            </div>
           </div>
-          <div style={{
-            width: 44,
-            height: 44,
-            borderRadius: 14,
-            background: 'rgba(124, 58, 237, 0.12)',
-            color: '#7C3AED',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0
-          }}>
-            <Sparkles size={22} strokeWidth={2.2} />
-          </div>
+
+          {/* Graduation Scenario Range Projection */}
+          {prediction?.isAvailable && prediction?.scenarioProjection && (
+            <div style={{
+              background: 'var(--bg, #F8FAFC)',
+              borderRadius: 12,
+              padding: '10px 12px',
+              border: '1px solid var(--border, #E2E8F0)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 4
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: 10.5, fontWeight: 700, color: '#6D28D9', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Scenario Range
+                </span>
+                {prediction.scenarioProjection.hasHistory ? (
+                  <span style={{ fontSize: 10, fontWeight: 600, color: '#059669', background: 'rgba(5, 150, 105, 0.1)', padding: '2px 6px', borderRadius: 4 }}>
+                    ±{prediction.scenarioProjection.standardDeviation} SD
+                  </span>
+                ) : (
+                  <span style={{ fontSize: 10, fontWeight: 600, color: '#D97706', background: 'rgba(217, 119, 6, 0.1)', padding: '2px 6px', borderRadius: 4 }}>
+                    {prediction.scenarioProjection.flag || 'insufficient history'}
+                  </span>
+                )}
+              </div>
+
+              {prediction.scenarioProjection.hasHistory ? (
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                  <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-dark, #0F172A)' }}>
+                    {prediction.scenarioProjection.low.toFixed(2)} – {prediction.scenarioProjection.high.toFixed(2)}
+                  </span>
+                  <span style={{ fontSize: 11, color: 'var(--text-muted, #64748B)' }}>
+                    (Exp: {prediction.scenarioProjection.expected.toFixed(2)})
+                  </span>
+                </div>
+              ) : (
+                <span style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--text-mid, #475569)' }}>
+                  Baseline: {prediction.predictedCGPA?.toFixed(2) || '\u2014'} (insufficient history)
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Credits Earned */}
