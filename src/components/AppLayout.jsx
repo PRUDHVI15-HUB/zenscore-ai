@@ -26,7 +26,8 @@ import {
   Settings,
   LogOut,
   CheckCheck,
-  ArrowRight
+  ArrowRight,
+  MessageSquareHeart
 } from 'lucide-react'
 
 
@@ -39,6 +40,7 @@ const allPages = [
   { label: 'Jobs',         path: '/jobs',         icon: '🏢' },
   { label: 'Productivity', path: '/productivity', icon: '⏱️' },
   { label: 'AI Tutor',     path: '/ai-tutor',     icon: '🤖' },
+  { label: 'Feedback',     path: '/feedback',     icon: '📝' },
 ]
 
 import {
@@ -240,6 +242,7 @@ export default function AppLayout({ children, title, searchVal, onSearchChange }
     if (p.startsWith('/productivity')) return 'Productivity'
     if (p.startsWith('/courses'))   return 'Courses'
     if (p.startsWith('/ai-tutor'))   return 'AI Tutor'
+    if (p.startsWith('/feedback'))  return 'Feedback Survey'
     if (p.startsWith('/profile'))   return 'Profile'
     if (p.startsWith('/study-groups')) return 'Study Groups'
     return 'ZenScore AI'
@@ -248,14 +251,15 @@ export default function AppLayout({ children, title, searchVal, onSearchChange }
   const activePageLabel = getHeaderTitle()
 
   const navLinks = [
-    { to: '/dashboard',    Icon: LayoutDashboard, label: 'Dashboard'    },
-    { to: '/academics',    Icon: GraduationCap,   label: 'Academics'    },
-    { to: '/careers',      Icon: Briefcase,       label: 'Careers'      },
-    { to: '/skills',       Icon: Cpu,             label: 'Skills'       },
-    { to: '/courses',      Icon: BookOpen,        label: 'Courses'      },
-    { to: '/jobs',         Icon: Building2,       label: 'Jobs'         },
-    { to: '/productivity', Icon: Clock,           label: 'Productivity' },
-    { to: '/ai-tutor',     Icon: Bot,             label: 'AI Tutor'     },
+    { to: '/dashboard',    Icon: LayoutDashboard,    label: 'Dashboard'    },
+    { to: '/academics',    Icon: GraduationCap,      label: 'Academics'    },
+    { to: '/careers',      Icon: Briefcase,          label: 'Careers'      },
+    { to: '/skills',       Icon: Cpu,                label: 'Skills'       },
+    { to: '/courses',      Icon: BookOpen,           label: 'Courses'      },
+    { to: '/jobs',         Icon: Building2,          label: 'Jobs'         },
+    { to: '/productivity', Icon: Clock,              label: 'Productivity' },
+    { to: '/ai-tutor',     Icon: Bot,                label: 'AI Tutor'     },
+    { to: '/feedback',     Icon: MessageSquareHeart, label: 'Feedback'     },
   ]
 
   const userInitial = user?.displayName
@@ -814,6 +818,33 @@ export default function AppLayout({ children, title, searchVal, onSearchChange }
               </button>
             )}
 
+
+            {/* Feedback Survey Button */}
+            <Link
+              to="/feedback"
+              aria-label="Feedback Survey"
+              title="Share feedback on ZenScore AI"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                background: location.pathname === '/feedback'
+                  ? 'linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)'
+                  : (isDark ? 'rgba(99, 102, 241, 0.15)' : 'rgba(99, 102, 241, 0.08)'),
+                border: `1px solid ${location.pathname === '/feedback' ? '#4F46E5' : (isDark ? 'rgba(99, 102, 241, 0.35)' : 'rgba(99, 102, 241, 0.25)')}`,
+                color: location.pathname === '/feedback' ? '#FFFFFF' : (isDark ? '#A5B4FC' : '#4F46E5'),
+                padding: isMobile ? '6px 10px' : '6px 12px',
+                borderRadius: 10,
+                fontSize: 12.5,
+                fontWeight: 700,
+                textDecoration: 'none',
+                transition: 'all 0.15s ease',
+                boxShadow: location.pathname === '/feedback' ? '0 2px 8px rgba(79,70,229,0.35)' : 'none'
+              }}
+            >
+              <MessageSquareHeart size={16} />
+              {!isMobile && <span>Feedback</span>}
+            </Link>
 
             {/* Global Light / Dark Theme Toggle Button */}
             <button

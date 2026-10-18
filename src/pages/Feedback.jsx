@@ -9,7 +9,8 @@ import {
   Building,
   GraduationCap,
   Sparkles,
-  HelpCircle
+  HelpCircle,
+  ShieldCheck
 } from 'lucide-react'
 
 const SUS_QUESTIONS = [
@@ -162,6 +163,22 @@ export default function Feedback() {
               Responses are collected for empirical research with strictly one submission allowed per student per study round.
             </p>
           </div>
+        </div>
+
+        {/* Research Study Consent Notice */}
+        <div style={{
+          background: 'rgba(99, 102, 241, 0.05)',
+          border: '1px solid rgba(99, 102, 241, 0.2)',
+          borderRadius: 16,
+          padding: '14px 18px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12
+        }}>
+          <ShieldCheck size={20} style={{ color: '#6366F1', flexShrink: 0 }} />
+          <p style={{ margin: 0, fontSize: 13, color: 'var(--text-dark, #0F172A)', lineHeight: 1.5 }}>
+            <strong>Consent Notice:</strong> Participation is voluntary. Responses are used only for a research paper, reported in aggregate, and no personal data will be published.
+          </p>
         </div>
 
         {/* Existing Submission Banner */}
