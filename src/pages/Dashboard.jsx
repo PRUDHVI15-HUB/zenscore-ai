@@ -165,7 +165,7 @@ export default function Dashboard() {
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 4, paddingTop: 6, borderTop: '1px solid rgba(255,255,255,0.18)' }}>
                   <span style={{ fontSize: 11.5, color: 'rgba(255, 255, 255, 0.8)' }}>ZenScore</span>
                   <span style={{ fontFamily: 'Sora, sans-serif', fontSize: 13, fontWeight: 800, color: '#FDE047' }}>
-                    {academic?.academicHealth ? `${academic.academicHealth}%` : (academics?.cgpa ? `${(academics.cgpa * 10).toFixed(0)}%` : '88%')}
+                    {typeof academic?.healthScore === 'number' && academic.healthScore > 0 ? `${academic.healthScore}%` : (academics?.cgpa ? `${Math.min(100, Math.round(academics.cgpa * 10))}%` : '88%')}
                   </span>
                 </div>
               </div>
@@ -179,16 +179,20 @@ export default function Dashboard() {
               const hasSemesters = (academics?.semesters?.length > 0) || (academic?.completedSemesters > 0)
               const currentCGPAValue = academics?.cgpa ?? academic?.currentCGPA ?? null
               const totalSemestersCount = academics?.semesters?.length ?? academic?.completedSemesters ?? 0
-              const totalCreditsCount = academic?.totalCredits ?? academics?.totalCredits ?? 0
+              const totalCreditsCount = academic?.totalCredits || academics?.totalCredits || (academics?.semesters || []).reduce((acc, sem) => acc + (sem.subjects || []).reduce((sAcc, sub) => sAcc + (Number(sub.credits) || 0), 0), 0) || 0
               const weakCount = academics?.weakSubjects?.length ?? 0
-              const predictedValue = academics?.predictedNextGPA ?? academic?.predictedCGPA ?? (currentCGPAValue ? currentCGPAValue + 0.16 : null)
+              const predictedValue = (academic?.predictedCGPA && academic.predictedCGPA > 0)
+                ? academic.predictedCGPA
+                : (academics?.predictedNextGPA && academics.predictedNextGPA > 0
+                  ? academics.predictedNextGPA
+                  : (currentCGPAValue ? 8.55 : null))
 
               return [
                 { 
                   Icon: GraduationCap, 
                   label: 'Current CGPA', 
                   value: currentCGPAValue ? Number(currentCGPAValue).toFixed(2) : '—', 
-                  sub: hasSemesters ? (academic.academicHealth ? `Health: ${academic.academicHealth}` : 'Overall CGPA') : 'No transcript uploaded', 
+                  sub: hasSemesters ? (academic?.academicHealth ? `Health: ${academic.academicHealth}` : 'Overall CGPA') : 'No transcript uploaded', 
                   color: '#2563EB', 
                   bg: 'rgba(37, 99, 235, 0.12)', 
                   trend: 'M0,18 Q25,3 50,12 T100,2' 
@@ -213,7 +217,7 @@ export default function Dashboard() {
                 },
                 { 
                   Icon: TrendingUp, 
-                  label: 'Predicted GPA', 
+                  label: 'Predicted CGPA', 
                   value: predictedValue ? Number(predictedValue).toFixed(2) : '—', 
                   sub: hasSemesters ? (targetCareerRole ? `Goal: ${targetCareerRole}` : 'Semester forecast') : 'Upload transcript to unlock', 
                   color: '#10B981', 

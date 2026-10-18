@@ -52,8 +52,13 @@ export function extractAcademicSummary(dashboardData, totalCompletedCredits = 0)
   const completedSems = semesters.filter(s => s.status === 'completed').length
   const totalSems     = semesters.length
 
-  // Count total subjects across all semesters
+  // Count total subjects and credits across all semesters
   const totalSubjects = semesters.reduce((sum, sem) => sum + (sem.subjects?.length || 0), 0)
+  const computedCredits = totalCompletedCredits > 0
+    ? totalCompletedCredits
+    : (dashboardData.totalCredits || semesters.reduce((sum, sem) => {
+        return sum + (sem.subjects || []).reduce((subSum, s) => subSum + (Number(s.credits) || 0), 0)
+      }, 0))
 
   // Latest SGPA = last semester's SGPA (most recent index)
   const lastSem     = semesters[semesters.length - 1]
@@ -73,12 +78,16 @@ export function extractAcademicSummary(dashboardData, totalCompletedCredits = 0)
   const lastMemoUploadedAt   = intelligence.lastMemoUploadedAt ?? dashboardData.lastMemoUploadedAt ?? null
 
   // Academic health from intelligence
-  const academicHealth = intelligence.healthScore
-    ? (intelligence.healthScore >= 85 ? 'Excellent'
-      : intelligence.healthScore >= 70 ? 'Good'
-      : intelligence.healthScore >= 50 ? 'Average'
+  const rawHealth = typeof intelligence.healthScore === 'object' && intelligence.healthScore !== null
+    ? (intelligence.healthScore.score ?? 85)
+    : (Number(intelligence.healthScore) || (dashboardData.currentCGPA ? Math.round(dashboardData.currentCGPA * 10) : 85))
+
+  const academicHealth = intelligence.healthStatus
+    || (typeof intelligence.healthScore === 'object' && intelligence.healthScore?.status)
+    || (rawHealth >= 85 ? 'Excellent'
+      : rawHealth >= 70 ? 'Good'
+      : rawHealth >= 50 ? 'Average'
       : 'At Risk')
-    : null
 
   // Timeline progress (completedSems / totalSems as %)
   const timelineProgress = totalSems > 0
@@ -105,8 +114,8 @@ export function extractAcademicSummary(dashboardData, totalCompletedCredits = 0)
     latestSGPA:         latestSGPA,
 
     // Credit Summary
-    totalCredits:     totalCompletedCredits,
-    creditsEarned:    totalCompletedCredits,
+    totalCredits:     computedCredits,
+    creditsEarned:    computedCredits,
     // creditsRemaining requires knowing total program credits — left null until set via Profile
     creditsRemaining: dashboardData.creditsRemaining ?? null,
 
