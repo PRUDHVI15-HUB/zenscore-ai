@@ -21,6 +21,7 @@ import {
   Sparkles, 
   CalendarDays, 
   AlertCircle, 
+  CheckCircle2,
   TrendingUp,
   Target,
   Menu
@@ -187,12 +188,31 @@ export default function Dashboard() {
                   ? academics.predictedNextGPA
                   : (currentCGPAValue ? 8.55 : null))
 
+              const computedHealth = (currentCGPAValue >= 8.0 && weakCount === 0)
+                ? 'Excellent'
+                : (currentCGPAValue >= 7.0 && weakCount <= 1)
+                  ? 'Good'
+                  : (currentCGPAValue >= 6.0 && weakCount <= 2)
+                    ? 'Average'
+                    : 'At Risk'
+
+              let displayHealth = computedHealth
+              if (academic?.academicHealth) {
+                const norm = String(academic.academicHealth).trim().toLowerCase()
+                if (norm === 'excellent') displayHealth = 'Excellent'
+                else if (norm === 'good') displayHealth = 'Good'
+                else if (norm === 'average' || norm === 'fair') displayHealth = 'Average'
+                else if (currentCGPAValue >= 8.0 && weakCount === 0) displayHealth = 'Excellent'
+                else if (norm === 'at risk' || norm === 'at_risk') displayHealth = computedHealth
+                else displayHealth = academic.academicHealth
+              }
+
               return [
                 { 
                   Icon: GraduationCap, 
                   label: 'Current CGPA', 
                   value: currentCGPAValue ? Number(currentCGPAValue).toFixed(2) : '—', 
-                  sub: hasSemesters ? (academic?.academicHealth ? `Health: ${academic.academicHealth}` : 'Overall CGPA') : 'No transcript uploaded', 
+                  sub: hasSemesters ? `Health: ${displayHealth}` : 'No transcript uploaded', 
                   color: '#2563EB', 
                   bg: 'rgba(37, 99, 235, 0.12)', 
                   trend: 'M0,18 Q25,3 50,12 T100,2' 
@@ -207,13 +227,13 @@ export default function Dashboard() {
                   trend: 'M0,15 L30,15 L60,5 L100,5' 
                 },
                 { 
-                  Icon: AlertCircle, 
+                  Icon: weakCount > 0 ? AlertCircle : CheckCircle2, 
                   label: 'Weak Subjects', 
                   value: weakCount, 
                   sub: hasSemesters ? ((weakCount > 0) ? `${weakCount} subjects need attention` : '🎉 All subjects passed cleanly') : 'No backlogs recorded', 
-                  color: '#EA580C', 
-                  bg: 'rgba(234, 88, 12, 0.12)', 
-                  trend: 'M0,12 Q30,5 60,20 T100,8' 
+                  color: weakCount > 0 ? '#EA580C' : '#10B981', 
+                  bg: weakCount > 0 ? 'rgba(234, 88, 12, 0.12)' : 'rgba(16, 185, 129, 0.12)', 
+                  trend: weakCount > 0 ? 'M0,12 Q30,5 60,20 T100,8' : 'M0,18 Q25,5 50,12 T100,2' 
                 },
                 { 
                   Icon: TrendingUp, 
